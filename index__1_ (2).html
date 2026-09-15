@@ -255,13 +255,93 @@
 
   @media print{
     .app-header,.side,.canvas-toolbar{display:none !important;}
-    .sheet{box-shadow:none;page-break-after:always;margin:0 auto;}
-    @page{ size:A4; margin:0; }
-
-    /* PDF export prints a dedicated off-DOM copy of the report; hide
-       everything else in the app so only that copy ends up on the page. */
     #uploadScreen,#workspaceScreen,#previewScreen,footer.app-foot,.toast{display:none !important;}
     #printExportRoot{display:block !important;}
+
+    @page{
+      size: A4 portrait;
+      margin: 0;
+    }
+    html, body{
+      background: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .sheet{
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      margin: 0 auto !important;
+      width: 210mm !important;
+      min-height: 297mm !important;
+      box-sizing: border-box !important;
+      padding: 14mm 15mm !important;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+    .sheet:last-of-type, .sheet:last-child{
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
+
+    /* Keep cover table within 261mm printable height */
+    table.cover-grid td{
+      padding: 3.5px 7px !important;
+    }
+    .cover-title-row td{
+      padding: 8px 12px !important;
+    }
+
+    /* Prevent header bars and info rows from orphaning */
+    table.site-header-bar{
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      margin-bottom: 8px !important;
+    }
+    table.twocol.info-row{
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      margin-bottom: 8px !important;
+    }
+    .info-box{
+      min-height: 56px !important;
+      padding: 6px 10px !important;
+    }
+
+    /* Prevent table rows and images from splitting across pages */
+    .img-slot{
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    .img-col img{
+      max-width: 100% !important;
+      height: auto !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    table.quant-table{
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    table.quant-table tr{
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    .comment-box{
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    table.comment-table tr{
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
   }
 </style>
 </head>
@@ -596,10 +676,13 @@
             if (quant){
               log.push({type:'removed', text:`Site "${site.title}", Spectrum ${cleanText(child.title)}: removed the individual "Quant Results" table (per-spectrum results are excluded; only the Quant Results Summary is kept).`});
             }
+            // By default, include only the first spectrum. Other spectra can be enabled via checkboxes.
+            const isFirst = site.spectra.length === 0;
             site.spectra.push({
               id: uid('spec'), label: cleanText(child.title),
               src: imgs[0] ? imgs[0].src : '', alt: imgs[0] ? (imgs[0].alt || cleanText(child.title)) : cleanText(child.title),
-              detailsRows: spectrumDetails ? extractDetailsRows(spectrumDetails.own) : [], include: true
+              detailsRows: spectrumDetails ? extractDetailsRows(spectrumDetails.own) : [],
+              include: isFirst
             });
           }
         });
@@ -722,7 +805,10 @@
   function renderImageSlot(item, kind){
     const slot = el('div', { class:'img-slot', 'data-id': item.id });
     const check = el('input', { type:'checkbox', class:'chk-box' });
-    check.checked = true;
+    check.checked = item.include !== false;
+    if (!check.checked){
+      slot.classList.add('excluded');
+    }
     check.addEventListener('change', ()=>{
       item.include = check.checked;
       slot.classList.toggle('excluded', !check.checked);
@@ -760,12 +846,20 @@
       const row = el('div', { class:'site-select-row' }, [
         el('span', { class:'lbl', text:'Spectra:' }),
         el('button', { type:'button', text:'All' }),
-        el('button', { type:'button', text:'None' })
+        el('button', { type:'button', text:'None' }),
+        el('button', { type:'button', text:'1st Only' })
       ]);
       const specWrap = el('div');
       site.spectra.forEach(sp => { if (sp.src) specWrap.appendChild(renderImageSlot(sp, 'spectrum')); });
       row.children[1].addEventListener('click', ()=> $all('input[type=checkbox]', specWrap).forEach(cb=>{cb.checked=true;cb.dispatchEvent(new Event('change'));}));
       row.children[2].addEventListener('click', ()=> $all('input[type=checkbox]', specWrap).forEach(cb=>{cb.checked=false;cb.dispatchEvent(new Event('change'));}));
+      row.children[3].addEventListener('click', ()=> {
+        const cbs = $all('input[type=checkbox]', specWrap);
+        cbs.forEach((cb, idx) => {
+          cb.checked = (idx === 0);
+          cb.dispatchEvent(new Event('change'));
+        });
+      });
       col.appendChild(row);
       col.appendChild(specWrap);
     }
@@ -1222,55 +1316,123 @@
 
   function getExportCss(){
     return `
-      body{font-family:"Times New Roman", Georgia, serif;color:#111;font-size:13px;line-height:1.5;margin:0;padding:0;background:#eee;}
-      .sheet{background:#fff;width:210mm;min-height:297mm;max-width:100%;box-sizing:border-box;margin:0 auto 26px;padding:18mm 15mm;}
-      @page{ size:A4; margin:0; }
-      @media print{
-        body{background:#fff;}
-        .sheet{box-shadow:none;margin:0 auto;page-break-after:always;}
+      @page {
+        size: A4 portrait;
+        margin: 0;
       }
-      table{border-collapse:collapse;}
-      .cover-grid{width:100%;font-size:13px;}
-      .cover-grid td{border:1px solid #97a0bd;padding:5px 9px;vertical-align:top;}
-      .cover-title-row td{background:#000080;color:#fff;font-weight:700;border:1px solid #000080;padding:11px 14px;}
-      .cover-title-row td.big{font-size:17px;text-align:center;}
-      .cover-title-row td.small{font-size:14px;}
-      .cover-grid .lbl{color:#222;background:#f4f5fa;font-weight:600;width:230px;text-align:left;}
-      .cover-grid .sec{background:#e7e9f3;font-weight:700;}
-      .chk-row td{padding:4px 9px 4px 20px;}
-      .chk-line{display:flex;align-items:center;gap:8px;}
-      .cover-grid td.chk-indicator{text-align:center;font-weight:700;padding-left:9px;}
-      table.twocol{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;margin-bottom:14px;}
-      table.twocol td.twocol-l{width:53%;vertical-align:top;padding:0 8px 0 0;}
-      table.twocol td.twocol-r{width:47%;vertical-align:top;padding:0 0 0 8px;}
-      table.site-header-bar{width:100%;border-collapse:collapse;background:#000080;margin:0 0 14px;}
-      table.site-header-bar td{color:#fff;padding:12px 18px;vertical-align:baseline;}
-      table.site-header-bar td.bar-ts{text-align:right;white-space:nowrap;}
-      .site-header-bar .proj-title{font-size:16px;font-weight:600;}
-      .site-header-bar .ts{font-size:9.5px;color:#cfd4ef;white-space:nowrap;}
-      .info-box{border:1px solid #444;padding:9px 12px;font-size:12.5px;line-height:1.55;min-height:70px;}
-      .img-col img{width:100%;display:block;border:1px solid #999;margin-bottom:4px;}
-      .proc-note{font-size:12px;color:#222;margin:10px 0 4px;}
-      table.quant-table{width:100%;font-size:12.5px;margin:2px 0 4px;}
-      table.quant-table th{border-top:1.4px solid #111;border-bottom:1px solid #111;text-align:left;font-weight:700;padding:4px 10px 4px 0;}
-      table.quant-table td{padding:3px 10px 3px 0;text-align:left;white-space:nowrap;}
-      table.quant-table tr.spacer td{padding:4px 0;border:none;}
-      table.quant-table tr.last-row td{border-bottom:1.4px solid #111;}
-      .weight-note{font-size:11.5px;color:#333;margin:2px 0 16px;}
-      .no-quant-msg{font-size:11.5px;color:#5b6478;font-style:italic;font-family:"Segoe UI",sans-serif;margin:6px 0 14px;}
-      .comment-box{border:1px solid #444;}
-      .comment-box .cb-title{padding:8px 12px;font-size:12.5px;font-weight:600;border-bottom:1px solid #444;}
-      table.comment-table{width:100%;font-size:12.5px;}
-      table.comment-table td{border:1px solid #444;padding:6px 10px;vertical-align:top;}
-      table.comment-table td.c-label{width:150px;background:#fafafa;}
-      .photo-mini-grid{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
-      .photo-mini{display:flex;align-items:center;gap:7px;border:1px solid #e3e6ee;border-radius:4px;padding:3px 6px;font-family:"Segoe UI",sans-serif;font-size:10.5px;}
-      .photo-mini img{width:38px;height:30px;object-fit:cover;border-radius:2px;background:#ddd;flex:none;}
-      .specimen-title-row h2{font-size:17px;color:#0d1f5c;margin:0;font-weight:700;}
-      .specimen-notes{font-size:12px;color:#333;margin:4px 0 0;}
-      table.details-mini{font-size:12px;margin-top:6px;}
-      table.details-mini td{border:1px solid #c7cddb;padding:3px 8px;}
-      table.details-mini td:first-child{background:#f4f5fa;font-weight:600;width:170px;}
+      body {
+        font-family: "Times New Roman", Georgia, serif;
+        color: #111;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0;
+        padding: 0;
+        background: #eee;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .sheet {
+        background: #fff;
+        width: 210mm;
+        min-height: 297mm;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin: 0 auto 26px;
+        padding: 14mm 15mm;
+        box-shadow: 0 1px 4px rgba(20,25,50,.10), 0 8px 22px rgba(20,25,50,.08);
+      }
+      @media print {
+        body { background: #fff; }
+        .sheet {
+          box-shadow: none;
+          margin: 0 auto;
+          width: 210mm;
+          min-height: 297mm;
+          padding: 14mm 15mm;
+          page-break-after: always;
+          break-after: page;
+        }
+        .sheet:last-of-type, .sheet:last-child {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+        table.cover-grid td { padding: 3.5px 7px; }
+        .cover-title-row td { padding: 8px 12px; }
+        table.site-header-bar {
+          break-after: avoid;
+          page-break-after: avoid;
+          margin-bottom: 8px;
+        }
+        table.twocol.info-row {
+          break-after: avoid;
+          page-break-after: avoid;
+          margin-bottom: 8px;
+        }
+        .info-box { min-height: 56px; padding: 6px 10px; }
+        .img-slot, .img-col img {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        table.quant-table {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        table.quant-table tr {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .comment-box {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        table.comment-table tr {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+      }
+      table { border-collapse: collapse; }
+      .cover-grid { width: 100%; font-size: 13px; }
+      .cover-grid td { border: 1px solid #97a0bd; padding: 4px 8px; vertical-align: top; }
+      .cover-title-row td { background: #000080; color: #fff; font-weight: 700; border: 1px solid #000080; padding: 10px 14px; }
+      .cover-title-row td.big { font-size: 17px; text-align: center; }
+      .cover-title-row td.small { font-size: 14px; }
+      .cover-grid .lbl { color: #222; background: #f4f5fa; font-weight: 600; width: 230px; text-align: left; }
+      .cover-grid .sec { background: #e7e9f3; font-weight: 700; }
+      .chk-row td { padding: 4px 8px 4px 18px; }
+      .chk-line { display: flex; align-items: center; gap: 8px; }
+      .cover-grid td.chk-indicator { text-align: center; font-weight: 700; padding-left: 8px; font-family: Arial, sans-serif; }
+      table.twocol { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; margin-bottom: 12px; }
+      table.twocol td.twocol-l { width: 53%; vertical-align: top; padding: 0 8px 0 0; }
+      table.twocol td.twocol-r { width: 47%; vertical-align: top; padding: 0 0 0 8px; }
+      table.site-header-bar { width: 100%; border-collapse: collapse; background: #000080; margin: 0 0 12px; }
+      table.site-header-bar td { color: #fff; padding: 10px 16px; vertical-align: baseline; }
+      table.site-header-bar td.bar-ts { text-align: right; white-space: nowrap; }
+      .site-header-bar .proj-title { font-size: 16px; font-weight: 600; }
+      .site-header-bar .ts { font-size: 9.5px; color: #cfd4ef; white-space: nowrap; }
+      .info-box { border: 1px solid #444; padding: 8px 12px; font-size: 12.5px; line-height: 1.5; min-height: 64px; }
+      .img-col img { width: 100%; display: block; border: 1px solid #999; margin-bottom: 4px; }
+      .proc-note { font-size: 12px; color: #222; margin: 8px 0 4px; }
+      table.quant-table { width: 100%; font-size: 12.5px; margin: 2px 0 4px; }
+      table.quant-table th { border-top: 1.4px solid #111; border-bottom: 1px solid #111; text-align: left; font-weight: 700; padding: 4px 8px 4px 0; }
+      table.quant-table td { padding: 3px 8px 3px 0; text-align: left; white-space: nowrap; }
+      table.quant-table tr.spacer td { padding: 3px 0; border: none; }
+      table.quant-table tr.stat-row:first-of-type td { border-top: 1px solid #111; }
+      table.quant-table tr.last-row td { border-bottom: 1.4px solid #111; }
+      .weight-note { font-size: 11.5px; color: #333; margin: 2px 0 14px; }
+      .no-quant-msg { font-size: 11.5px; color: #5b6478; font-style: italic; font-family: "Segoe UI", sans-serif; margin: 6px 0 14px; }
+      .comment-box { border: 1px solid #444; }
+      .comment-box .cb-title { padding: 7px 12px; font-size: 12.5px; font-weight: 600; border-bottom: 1px solid #444; }
+      table.comment-table { width: 100%; font-size: 12.5px; }
+      table.comment-table td { border: 1px solid #444; padding: 5px 9px; vertical-align: top; }
+      table.comment-table td.c-label { width: 140px; background: #fafafa; }
+      .photo-mini-grid { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
+      .photo-mini { display: flex; align-items: center; gap: 7px; border: 1px solid #e3e6ee; border-radius: 4px; padding: 3px 6px; font-family: "Segoe UI", sans-serif; font-size: 10.5px; }
+      .photo-mini img { width: 38px; height: 30px; object-fit: cover; border-radius: 2px; background: #ddd; flex: none; }
+      .specimen-title-row h2 { font-size: 17px; color: #0d1f5c; margin: 0; font-weight: 700; }
+      .specimen-notes { font-size: 12px; color: #333; margin: 4px 0 0; }
+      table.details-mini { font-size: 12px; margin-top: 6px; }
+      table.details-mini td { border: 1px solid #c7cddb; padding: 3px 8px; }
+      table.details-mini td:first-child { background: #f4f5fa; font-weight: 600; width: 170px; }
     `;
   }
 
@@ -1316,51 +1478,129 @@ ${bodyEl.innerHTML}
       n.setAttribute('style', existing + sep + css);
     });
 
-    apply('.sheet', 'background:#ffffff;width:210mm;margin:0 auto 26px auto;padding:18mm 15mm;font-family:"Times New Roman",Georgia,serif;page-break-after:always;page-break-inside:avoid;');
+    // Word handles page margins via @page Section1 (15mm all sides).
+    // .sheet inside Word must fill width without double-padding:
+    apply('.sheet', 'background:#ffffff;width:100%;margin:0;padding:0;font-family:"Times New Roman",Georgia,serif;');
 
-    apply('table.cover-grid', 'width:100%;border-collapse:collapse;font-size:13px;font-family:"Times New Roman",Georgia,serif;');
-    apply('table.cover-grid td', 'border:1px solid #97a0bd;padding:5px 9px;vertical-align:top;');
-    apply('.cover-title-row td', 'background:#000080;color:#ffffff;font-weight:bold;border:1px solid #000080;padding:11px 14px;');
-    apply('.cover-title-row td.big', 'font-size:17px;text-align:center;');
-    apply('.cover-title-row td.small', 'font-size:14px;');
-    apply('table.cover-grid td.lbl', 'background:#f4f5fa;font-weight:bold;width:230px;text-align:left;');
+    apply('table.cover-grid', 'width:100%;border-collapse:collapse;font-size:12px;font-family:"Times New Roman",Georgia,serif;mso-table-layout-alt:fixed;');
+    apply('table.cover-grid td', 'border:1px solid #97a0bd;padding:4px 7px;vertical-align:top;');
+    apply('.cover-title-row td', 'background:#000080;color:#ffffff;font-weight:bold;border:1px solid #000080;padding:9px 12px;');
+    apply('.cover-title-row td.big', 'font-size:16px;text-align:center;');
+    apply('.cover-title-row td.small', 'font-size:13px;');
+    apply('table.cover-grid td.lbl', 'background:#f4f5fa;font-weight:bold;width:200px;text-align:left;');
     apply('table.cover-grid td.sec', 'background:#e7e9f3;font-weight:bold;');
-    apply('table.cover-grid td.chk-indicator', 'text-align:center;font-weight:bold;');
+    apply('table.cover-grid td.chk-indicator', 'text-align:center;font-weight:bold;font-family:Arial,sans-serif;');
 
-    apply('table.twocol', 'width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:14px;');
-    apply('table.twocol.info-row', 'page-break-inside:avoid;');
-    apply('table.twocol td.twocol-l', 'width:53%;vertical-align:top;padding:0 8px 0 0;');
-    apply('table.twocol td.twocol-r', 'width:47%;vertical-align:top;padding:0 0 0 8px;');
+    apply('table.twocol', 'width:100%;border-collapse:collapse;table-layout:fixed;mso-table-layout-alt:fixed;margin-bottom:10px;');
+    apply('table.twocol.info-row', 'page-break-inside:avoid;page-break-after:avoid;margin-bottom:10px;');
+    apply('table.twocol td.twocol-l', 'width:53%;vertical-align:top;padding:0 6px 0 0;');
+    apply('table.twocol td.twocol-r', 'width:47%;vertical-align:top;padding:0 0 0 6px;');
 
-    apply('table.site-header-bar', 'width:100%;border-collapse:collapse;background:#000080;margin:0 0 14px 0;page-break-inside:avoid;');
-    apply('table.site-header-bar td', 'color:#ffffff;padding:12px 18px;');
+    apply('table.site-header-bar', 'width:100%;border-collapse:collapse;background:#000080;margin:0 0 10px 0;page-break-inside:avoid;page-break-after:avoid;');
+    apply('table.site-header-bar td', 'color:#ffffff;padding:9px 14px;');
     apply('table.site-header-bar td.bar-ts', 'text-align:right;white-space:nowrap;font-size:9.5px;color:#cfd4ef;');
-    apply('.site-header-bar .proj-title', 'font-size:16px;font-weight:600;');
+    apply('.site-header-bar .proj-title', 'font-size:15px;font-weight:600;');
 
-    apply('.info-box', 'border:1px solid #444444;padding:9px 12px;font-size:12.5px;line-height:1.55;page-break-inside:avoid;');
+    apply('.info-box', 'border:1px solid #444444;padding:7px 10px;font-size:12px;line-height:1.45;page-break-inside:avoid;');
 
-    apply('.img-col img', 'width:88mm;max-width:88mm;height:auto;display:block;border:1px solid #999999;margin-bottom:4px;page-break-inside:avoid;');
-    apply('.proc-note', 'font-size:12px;color:#222222;margin:10px 0 4px 0;');
+    apply('.img-col img', 'display:block;border:1px solid #999999;margin-bottom:4px;');
+    apply('.proc-note', 'font-size:11.5px;color:#222222;margin:8px 0 3px 0;');
 
-    apply('table.quant-table', 'width:100%;border-collapse:collapse;font-size:12.5px;margin:2px 0 4px 0;');
-    apply('table.quant-table th', 'border-top:1.4px solid #111111;border-bottom:1px solid #111111;text-align:left;font-weight:bold;padding:4px 10px 4px 0;');
-    apply('table.quant-table td', 'padding:3px 10px 3px 0;text-align:left;');
+    apply('table.quant-table', 'width:100%;border-collapse:collapse;font-size:12px;margin:2px 0 4px 0;mso-table-layout-alt:fixed;');
+    apply('table.quant-table th', 'border-top:1.4px solid #111111;border-bottom:1px solid #111111;text-align:left;font-weight:bold;padding:3px 6px 3px 0;');
+    apply('table.quant-table td', 'padding:2.5px 6px 2.5px 0;text-align:left;');
     apply('table.quant-table tr.last-row td', 'border-bottom:1.4px solid #111111;');
-    apply('.weight-note', 'font-size:11.5px;color:#333333;margin:2px 0 16px 0;');
+    apply('.weight-note', 'font-size:11px;color:#333333;margin:2px 0 12px 0;');
 
-    apply('.comment-box', 'border:1px solid #444444;');
-    apply('.comment-box .cb-title', 'padding:8px 12px;font-size:12.5px;font-weight:600;border-bottom:1px solid #444444;');
-    apply('table.comment-table', 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;');
-    apply('table.comment-table td', 'border:1px solid #444444;padding:6px 10px;vertical-align:top;word-wrap:break-word;');
-    apply('table.comment-table td.c-label', 'width:120px;background:#fafafa;');
-    apply('table.comment-table td.c-value', 'width:150px;');
+    apply('.comment-box', 'border:1px solid #444444;page-break-inside:avoid;');
+    apply('.comment-box .cb-title', 'padding:6px 10px;font-size:12px;font-weight:600;border-bottom:1px solid #444444;');
+    apply('table.comment-table', 'width:100%;table-layout:fixed;mso-table-layout-alt:fixed;border-collapse:collapse;font-size:12px;');
+    apply('table.comment-table td', 'border:1px solid #444444;padding:5px 8px;vertical-align:top;word-wrap:break-word;');
+    apply('table.comment-table td.c-label', 'width:42%;background:#fafafa;');
+    apply('table.comment-table td.c-value', 'width:58%;');
 
-    apply('.photo-mini', 'display:inline-block;border:1px solid #e3e6ee;border-radius:4px;padding:3px 6px;font-family:"Segoe UI",sans-serif;font-size:10.5px;margin:0 0 4px 0;');
-    apply('.photo-mini img', 'width:38px;height:30px;vertical-align:middle;margin-right:6px;');
+    apply('.photo-mini', 'display:inline-block;border:1px solid #e3e6ee;border-radius:4px;padding:2px 5px;font-family:"Segoe UI",sans-serif;font-size:10px;margin:0 0 3px 0;');
+    apply('.photo-mini img', 'width:38px;height:30px;vertical-align:middle;margin-right:5px;');
 
-    apply('.specimen-title-row h2', 'font-size:17px;color:#0d1f5c;margin:0;font-weight:bold;font-family:"Times New Roman",Georgia,serif;');
-    apply('table.details-mini', 'font-size:12px;margin-top:6px;border-collapse:collapse;');
-    apply('table.details-mini td', 'border:1px solid #c7cddb;padding:3px 8px;');
+    apply('.specimen-title-row h2', 'font-size:16px;color:#0d1f5c;margin:0;font-weight:bold;font-family:"Times New Roman",Georgia,serif;');
+    apply('table.details-mini', 'font-size:11.5px;margin-top:5px;border-collapse:collapse;');
+    apply('table.details-mini td', 'border:1px solid #c7cddb;padding:2.5px 7px;');
+
+    // Restructure site sheets into a single unified 3-row table for Word
+    // Row 1: Header bar, Row 2: Info row, Row 3: Two-column content (images+quant, comments)
+    // This locks header and content onto the same page in Word, eliminating orphaned headers.
+    $all('.sheet', root).forEach(sheet => {
+      const bar = sheet.querySelector('table.site-header-bar');
+      const info = sheet.querySelector('table.info-row');
+      const content = sheet.querySelector('table.content-row');
+      if (bar && content){
+        const master = document.createElement('table');
+        master.className = 'site-sheet-table';
+        master.setAttribute('style', 'width:100%;border-collapse:collapse;table-layout:fixed;mso-table-layout-alt:fixed;');
+        master.setAttribute('border', '0');
+        master.setAttribute('cellspacing', '0');
+        master.setAttribute('cellpadding', '0');
+
+        const cg = document.createElement('colgroup');
+        cg.innerHTML = '<col style="width:53%;" width="53%"><col style="width:47%;" width="47%">';
+        master.appendChild(cg);
+
+        // Row 1: Header bar
+        const tr1 = document.createElement('tr');
+        const td1 = document.createElement('td');
+        td1.setAttribute('colspan', '2');
+        td1.setAttribute('style', 'padding:0 0 6px 0;');
+        td1.appendChild(bar);
+        tr1.appendChild(td1);
+        master.appendChild(tr1);
+
+        // Row 2: Info row (if present)
+        if (info){
+          const tr2 = document.createElement('tr');
+          const td2 = document.createElement('td');
+          td2.setAttribute('colspan', '2');
+          td2.setAttribute('style', 'padding:0 0 8px 0;');
+          td2.appendChild(info);
+          tr2.appendChild(td2);
+          master.appendChild(tr2);
+        }
+
+        // Row 3: Two-column content
+        const tr3 = document.createElement('tr');
+        const leftTd = content.querySelector('td.twocol-l');
+        const rightTd = content.querySelector('td.twocol-r');
+        if (leftTd){
+          if (!rightTd){
+            leftTd.setAttribute('colspan', '2');
+            leftTd.setAttribute('style', (leftTd.getAttribute('style') || '') + ';vertical-align:top;width:100%;');
+          } else {
+            leftTd.setAttribute('style', (leftTd.getAttribute('style') || '') + ';vertical-align:top;padding-right:10px;');
+          }
+          tr3.appendChild(leftTd);
+        }
+        if (rightTd){
+          rightTd.setAttribute('style', (rightTd.getAttribute('style') || '') + ';vertical-align:top;padding-left:10px;');
+          tr3.appendChild(rightTd);
+        }
+        master.appendChild(tr3);
+
+        content.parentNode.replaceChild(master, content);
+      }
+    });
+
+    // Add colgroups to lock column proportions in Word
+    $all('table.twocol', root).forEach(tbl => {
+      if (!tbl.querySelector('colgroup')){
+        const cg = document.createElement('colgroup');
+        cg.innerHTML = '<col style="width:53%;" width="53%"><col style="width:47%;" width="47%">';
+        tbl.insertBefore(cg, tbl.firstChild);
+      }
+    });
+
+    // Add explicit HTML borders for Word compatibility
+    $all('table.cover-grid, table.comment-table, table.details-mini', root).forEach(t => {
+      t.setAttribute('border', '1');
+    });
   }
 
   // Word's HTML engine (all versions) cannot decode WebP, and cannot
@@ -1378,15 +1618,35 @@ ${bodyEl.innerHTML}
   }
   function convertImgToPngIfNeeded(imgEl){
     const src = imgEl.getAttribute('src') || '';
-    if (!/^data:image\/(webp|svg\+xml)/i.test(src)) return Promise.resolve();
+    if (!src) return Promise.resolve();
     return loadImageEl(src).then(loaded => {
-      const w = loaded.naturalWidth || loaded.width || 400;
-      const h = loaded.naturalHeight || loaded.height || 300;
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(loaded, 0, 0, w, h);
-      imgEl.setAttribute('src', canvas.toDataURL('image/png'));
+      const natW = loaded.naturalWidth || loaded.width || 400;
+      const natH = loaded.naturalHeight || loaded.height || 300;
+      const isMini = !!imgEl.closest('.photo-mini');
+      
+      let targetW, targetH;
+      if (isMini){
+        targetW = 38;
+        targetH = 30;
+      } else {
+        // Left column width in Word (53% of 180mm = ~95mm)
+        // Set explicit 280px width with proportional height
+        targetW = 280;
+        targetH = Math.round((targetW * natH) / natW);
+      }
+      imgEl.setAttribute('width', String(targetW));
+      imgEl.setAttribute('height', String(targetH));
+      imgEl.style.width = targetW + 'px';
+      imgEl.style.height = targetH + 'px';
+
+      if (/^data:image\/(webp|svg\+xml)/i.test(src) || src.startsWith('data:image/svg')){
+        const canvas = document.createElement('canvas');
+        canvas.width = natW;
+        canvas.height = natH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(loaded, 0, 0, natW, natH);
+        imgEl.setAttribute('src', canvas.toDataURL('image/png'));
+      }
     }).catch(()=>{ /* leave the original src if conversion fails */ });
   }
   function makeImagesWordSafe(root){
@@ -1399,23 +1659,70 @@ ${bodyEl.innerHTML}
     return makeImagesWordSafe(clean).then(()=>{
       inlineStylesForWord(clean);
       const title = escapeHtml(MODEL.project.title);
+
+      // Deterministic Word page breaks between sheets
+      const sheets = $all('.sheet', clean);
+      sheets.forEach((sheet, idx) => {
+        if (idx > 0){
+          const br = document.createElement('br');
+          br.setAttribute('clear', 'all');
+          br.setAttribute('style', 'page-break-before:always;mso-break-type:section-break');
+          sheet.parentNode.insertBefore(br, sheet);
+        }
+      });
+
       const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
 xmlns:w="urn:schemas-microsoft-com:office:word"
 xmlns="http://www.w3.org/TR/REC-html40">
 <head>
 <meta charset="UTF-8">
 <meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 15">
+<meta name=Originator content="Microsoft Word 15">
 <title>${title}</title>
 <!--[if gte mso 9]>
-<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
+<xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
 <![endif]-->
 <style>
-${getExportCss()}
-@page { size: 21cm 29.7cm; margin: 2cm; }
+@page Section1 {
+  size: 595.3pt 841.9pt;
+  margin: 15mm 15mm 15mm 15mm;
+  mso-header-margin: 0pt;
+  mso-footer-margin: 0pt;
+  mso-paper-source: 0;
+}
+div.Section1 {
+  page: Section1;
+}
+body {
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0;
+}
+table {
+  border-collapse: collapse;
+  mso-table-layout-alt: fixed;
+}
+img {
+  display: block;
+}
+p {
+  margin: 0;
+}
 </style>
 </head>
 <body>
+<div class="Section1">
 ${clean.innerHTML}
+</div>
 </body>
 </html>`;
       downloadBlob(new Blob(['\ufeff', html], {type:'application/msword'}), baseName(SOURCE_FILE_NAME) + '_report.doc');
