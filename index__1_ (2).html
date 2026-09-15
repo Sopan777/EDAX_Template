@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EDX Report Converter</title>
+<style>
+  :root{
+    --navy:#000080;
+    --navy-2:#0d1f5c;
+    --brass:#a9782f;
+    --brass-2:#8f6323;
+    --paper:#ffffff;
+    --canvas:#eef0f4;
+    --line:#c7cddb;
+    --line-soft:#e3e6ee;
+    --ink:#20263a;
+    --ink-soft:#5b6478;
+    --good:#2f7a4f;
+    --bad:#b23a3a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--canvas);
+    color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+  }
+
+  /* ---------- App chrome ---------- */
+  .app-header{
+    background:var(--navy-2);
+    color:#fff;
+    padding:14px 22px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    position:sticky;
+    top:0;
+    z-index:50;
+    box-shadow:0 2px 10px rgba(0,0,0,.18);
+  }
+  .app-header .brand{display:flex;align-items:baseline;gap:10px;}
+  .app-header .brand .mark{
+    display:inline-block;width:10px;height:10px;background:var(--brass);
+    border-radius:1px;transform:rotate(45deg);
+  }
+  .app-header h1{font-size:16px;letter-spacing:.2px;margin:0;font-weight:600;}
+  .app-header .subtitle{font-size:12px;color:#c7cdea;margin-left:2px;}
+  .stepper{font-size:12px;color:#c7cdea;display:flex;gap:6px;align-items:center;}
+  .stepper b{color:#fff;font-weight:600;}
+
+  button{font-family:inherit;cursor:pointer;}
+  .btn{
+    border:1px solid transparent;border-radius:5px;padding:8px 14px;font-size:13px;
+    font-weight:600;background:#2a3970;color:#fff;transition:background .15s ease, transform .05s ease;
+  }
+  .btn:hover{background:#354588;}
+  .btn:active{transform:translateY(1px);}
+  .btn.brass{background:var(--brass);}
+  .btn.brass:hover{background:var(--brass-2);}
+  .btn.ghost{background:transparent;border-color:#4a5690;color:#dfe3f7;}
+  .btn.ghost:hover{background:#232e5c;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.small{padding:5px 10px;font-size:12px;}
+
+  main.shell{max-width:1220px;margin:0 auto;padding:26px 22px 80px;}
+
+  /* ---------- Upload screen ---------- */
+  .upload-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 20px;}
+  .upload-card{
+    background:var(--paper);border:1.5px dashed var(--line);border-radius:10px;max-width:640px;
+    width:100%;padding:46px 40px;text-align:center;transition:border-color .15s ease, background .15s ease;
+  }
+  .upload-card.drag{border-color:var(--brass);background:#fdf8ef;}
+  .upload-card h2{margin:0 0 8px;font-size:20px;color:var(--navy-2);}
+  .upload-card p{color:var(--ink-soft);font-size:14px;line-height:1.55;margin:0 0 22px;}
+  .upload-card input[type=file]{display:none;}
+  .upload-steps{max-width:640px;width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:26px;}
+  .upload-steps .step{background:var(--paper);border:1px solid var(--line-soft);border-radius:8px;padding:12px 10px;font-size:12px;color:var(--ink-soft);text-align:center;}
+  .upload-steps .step b{display:block;color:var(--navy-2);font-size:13px;margin-bottom:3px;}
+  .file-name-pill{display:inline-block;margin-top:14px;font-size:12px;color:var(--navy-2);background:#eef1fb;border:1px solid #d6dcf2;padding:4px 10px;border-radius:20px;}
+  .upload-error{margin-top:16px;color:var(--bad);font-size:13px;font-weight:600;}
+  .upload-note{margin-top:18px;font-size:11.5px;color:var(--ink-soft);max-width:520px;}
+
+  /* ---------- Workspace layout ---------- */
+  .workspace{display:grid;grid-template-columns:250px 1fr;gap:20px;align-items:start;}
+  @media (max-width:960px){.workspace{grid-template-columns:1fr;}}
+
+  .side{position:sticky;top:70px;display:flex;flex-direction:column;gap:14px;}
+  .panel{background:var(--paper);border:1px solid var(--line-soft);border-radius:8px;padding:14px 14px 16px;}
+  .panel h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft);font-weight:700;}
+  .panel .row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;color:var(--ink);}
+  .panel .row span:last-child{font-weight:600;color:var(--navy-2);}
+  .log-list{list-style:none;margin:0;padding:0;font-size:12px;color:var(--ink-soft);line-height:1.5;max-height:220px;overflow-y:auto;}
+  .log-list li{padding:5px 0;border-bottom:1px dashed var(--line-soft);}
+  .log-list li:last-child{border-bottom:none;}
+  .log-list li.removed{color:var(--bad);}
+
+  .nav-outline{list-style:none;margin:0;padding:0;font-size:12.5px;max-height:42vh;overflow-y:auto;}
+  .nav-outline a{display:block;padding:4px 6px;color:var(--ink);text-decoration:none;border-radius:4px;}
+  .nav-outline a:hover{background:#eef1fb;color:var(--navy-2);}
+  .nav-outline .lvl-2{padding-left:0;font-weight:700;color:var(--navy-2);}
+  .nav-outline .lvl-3{padding-left:12px;font-size:12px;color:var(--ink-soft);}
+
+  .hint-box{font-size:12px;color:var(--ink-soft);line-height:1.5;background:#fbf7ee;border:1px solid #eee0c4;border-radius:6px;padding:10px 11px;}
+
+  .opt-check-line{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink);margin:2px 0 12px;cursor:pointer;}
+  .opt-field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+  .opt-field:last-child{margin-bottom:0;}
+  .opt-field label{font-size:11.5px;color:var(--ink-soft);font-weight:600;}
+  .opt-field select{
+    width:100%;font-size:12.5px;padding:5px 6px;border:1px solid var(--line);border-radius:4px;
+    background:#fff;color:var(--ink);font-family:inherit;
+  }
+
+  /* checklist checkmark/cross indicator cells on the cover sheet */
+  .cover-grid td.chk-indicator{text-align:center;font-weight:700;}
+
+  /* ---------- Report canvas ---------- */
+  .canvas-wrap{background:transparent;}
+  .canvas-toolbar{
+    display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+    border:1px solid var(--line-soft);background:#f8f9fc;gap:10px;flex-wrap:wrap;
+    border-radius:8px;margin-bottom:18px;position:sticky;top:64px;z-index:10;
+  }
+  .canvas-toolbar .msg{font-size:12px;color:var(--ink-soft);}
+  .edit-tip{font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;}
+  .edit-tip .dot{width:7px;height:7px;border-radius:50%;background:var(--brass);display:inline-block;}
+
+  #reportRoot{ font-family:"Times New Roman", Georgia, serif; color:#111; }
+
+  [contenteditable="true"]{outline:none;border-radius:2px;}
+  [contenteditable="true"]:hover{background:rgba(169,120,47,.08);}
+  [contenteditable="true"]:focus{background:rgba(169,120,47,.14);box-shadow:0 0 0 1px var(--brass) inset;}
+
+  /* ---- "sheet" = one printed page, sized to A4 ---- */
+  .sheet{
+    background:#fff;
+    width:210mm;
+    min-height:297mm;
+    max-width:100%;
+    box-sizing:border-box;
+    margin:0 auto 26px;
+    box-shadow:0 1px 4px rgba(20,25,50,.10), 0 8px 22px rgba(20,25,50,.08);
+    border-radius:3px;
+    padding:18mm 15mm;
+  }
+  .sheet + .sheet{margin-top:26px;}
+
+  /* cover page fields */
+  .cover-grid{width:100%;border-collapse:collapse;font-size:13px;}
+  .cover-grid td{border:1px solid #97a0bd;padding:5px 9px;vertical-align:top;}
+  .cover-title-row td{background:var(--navy);color:#fff;font-weight:700;border:1px solid var(--navy);padding:11px 14px;}
+  .cover-title-row td.big{font-size:17px;text-align:center;}
+  .cover-title-row td.small{font-size:14px;}
+  .cover-grid .lbl{color:#222;background:#f4f5fa;font-weight:600;width:230px;text-align:left;white-space:normal;}
+  .cover-grid .sec{background:#e7e9f3;font-weight:700;}
+  .cover-grid .val{min-width:120px;}
+  .cover-grid .chk-row td{padding:4px 9px 4px 20px;}
+  .chk-line{display:flex;align-items:center;gap:8px;}
+  .chk-box{width:13px;height:13px;flex:none;cursor:pointer;}
+
+  /* two-column site page (info boxes + image col + comment col) --
+     built as real <table> layouts (see twoColTable in JS) since Word's
+     HTML engine does not support CSS grid or flexbox at all. */
+  table.twocol{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;margin-bottom:14px;}
+  table.twocol td.twocol-l{width:53%;vertical-align:top;padding:0 8px 0 0;}
+  table.twocol td.twocol-r{width:47%;vertical-align:top;padding:0 0 0 8px;}
+  table.content-row td.twocol-l,table.content-row td.twocol-r{vertical-align:top;}
+
+  #reportRoot.hide-comments table.content-row td.twocol-r{display:none;}
+  #reportRoot.hide-comments table.content-row td.twocol-l{width:100%;}
+
+  table.site-header-bar{width:100%;border-collapse:collapse;background:var(--navy);margin:0 0 14px;}
+  table.site-header-bar td{color:#fff;padding:12px 18px;vertical-align:baseline;}
+  table.site-header-bar td.bar-ts{text-align:right;white-space:nowrap;}
+  .site-header-bar .proj-title{font-size:16px;font-weight:600;}
+  .site-header-bar .ts{font-size:9.5px;color:#cfd4ef;white-space:nowrap;}
+
+  .info-box{border:1px solid #444;padding:9px 12px;font-size:12.5px;line-height:1.55;min-height:70px;}
+  .info-box .ln{white-space:pre-wrap;}
+  .info-box .ln b{font-weight:600;}
+
+  .img-col img{width:100%;display:block;border:1px solid #999;}
+  .img-col .img-slot{position:relative;margin-bottom:4px;}
+  .img-col .sel-overlay{
+    position:absolute;top:6px;left:6px;background:rgba(255,255,255,.88);border:1px solid #b7bccb;
+    border-radius:4px;padding:2px 7px 2px 5px;font-family:"Segoe UI",sans-serif;font-size:11px;
+    display:flex;align-items:center;gap:5px;color:#333;
+  }
+  .img-slot.excluded img{opacity:.28;}
+  .img-slot.excluded .sel-overlay{background:rgba(255,255,255,.96);}
+
+  .proc-note{font-size:12px;color:#222;margin:10px 0 4px;}
+  table.quant-table{width:100%;border-collapse:collapse;font-size:12.5px;margin:2px 0 4px;}
+  table.quant-table th{border-top:1.4px solid #111;border-bottom:1px solid #111;text-align:left;font-weight:700;padding:4px 10px 4px 0;}
+  table.quant-table td{padding:3px 10px 3px 0;text-align:left;white-space:nowrap;}
+  table.quant-table tr.spacer td{padding:4px 0;border:none;}
+  table.quant-table tr.stat-row:first-of-type td{border-top:1px solid #111;}
+  table.quant-table tr.last-row td{border-bottom:1.4px solid #111;}
+  .weight-note{font-size:11.5px;color:#333;margin:2px 0 16px;}
+  .no-quant-msg{font-size:11.5px;color:var(--ink-soft);font-style:italic;font-family:"Segoe UI",sans-serif;margin:6px 0 14px;}
+
+  .site-select-row{display:flex;align-items:center;gap:8px;margin:2px 0 8px;font-family:"Segoe UI",sans-serif;}
+  .site-select-row button{font-family:inherit;font-size:10.5px;border:1px solid var(--line);background:#fff;color:var(--navy-2);border-radius:4px;padding:2px 8px;}
+  .site-select-row button:hover{background:#eef1fb;}
+  .site-select-row .lbl{font-size:10.5px;color:var(--ink-soft);}
+
+  .comment-box{border:1px solid #444;}
+  .comment-box .cb-title{padding:8px 12px;font-size:12.5px;font-weight:600;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center;}
+  .comment-box .cb-title .copy-btn{
+    font-family:"Segoe UI",sans-serif;font-size:10px;border:1px solid var(--line);background:#fbfbfd;
+    color:var(--navy-2);border-radius:4px;padding:2px 7px;font-weight:500;
+  }
+  .comment-box .cb-title .copy-btn:hover{background:#eef1fb;}
+  table.comment-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.comment-table td{border:1px solid #444;padding:6px 10px;vertical-align:top;}
+  table.comment-table td.c-label{width:150px;background:#fafafa;}
+  table.comment-table td.c-value{min-width:120px;}
+  .photo-mini-grid{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
+  .photo-mini{display:flex;align-items:center;gap:7px;border:1px solid var(--line-soft);border-radius:4px;padding:3px 6px;font-family:"Segoe UI",sans-serif;font-size:10.5px;}
+  .photo-mini img{width:38px;height:30px;object-fit:cover;border-radius:2px;background:#ddd;flex:none;}
+  .photo-mini .pm-label{flex:1;contenteditable-hint:none;}
+  .photo-mini .pm-remove{font-family:inherit;border:none;background:none;color:var(--bad);cursor:pointer;font-size:13px;line-height:1;padding:2px;}
+  .add-photo-btn{
+    font-family:"Segoe UI",sans-serif;font-size:10.5px;border:1px dashed var(--line);background:#fff;
+    color:var(--navy-2);border-radius:4px;padding:4px 9px;margin-top:4px;cursor:pointer;
+  }
+  .add-photo-btn:hover{background:#eef1fb;}
+  .hidden-file-input{display:none;}
+
+  .specimen-title-row{margin:6px 0 16px;}
+  .specimen-title-row h2{font-size:17px;color:var(--navy-2);margin:0;font-weight:700;}
+  .specimen-notes{font-size:12px;color:#333;margin:4px 0 0;}
+  .specimen-notes table.details-mini{border-collapse:collapse;margin-top:6px;font-size:12px;}
+  .specimen-notes table.details-mini td{border:1px solid #c7cddb;padding:3px 8px;}
+  .specimen-notes table.details-mini td:first-child{background:#f4f5fa;font-weight:600;width:170px;}
+
+  .empty-state{text-align:center;color:var(--ink-soft);padding:40px 20px;font-family:"Segoe UI",sans-serif;font-size:13px;}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--navy-2);
+    color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.25);
+    opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:200;max-width:420px;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.error{background:var(--bad);}
+
+  footer.app-foot{text-align:center;font-size:11px;color:#8a92a8;padding:20px;}
+
+  #printExportRoot{display:none;}
+
+  @media print{
+    .app-header,.side,.canvas-toolbar{display:none !important;}
+    .sheet{box-shadow:none;page-break-after:always;margin:0 auto;}
+    @page{ size:A4; margin:0; }
+
+    /* PDF export prints a dedicated off-DOM copy of the report; hide
+       everything else in the app so only that copy ends up on the page. */
+    #uploadScreen,#workspaceScreen,#previewScreen,footer.app-foot,.toast{display:none !important;}
+    #printExportRoot{display:block !important;}
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="mark"></span>
+    <h1>EDX Report Converter</h1>
+    <span class="subtitle">Project Report &rarr; Formatted Summary Report</span>
+  </div>
+  <div class="actions" id="headerActions">
+    <span class="stepper" id="stepperLabel"><b>Step 1</b>&nbsp;&middot;&nbsp;Upload source report</span>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ============ UPLOAD SCREEN ============ -->
+  <section id="uploadScreen" class="upload-wrap">
+    <div class="upload-card" id="dropCard">
+      <h2>Upload the source Project Report</h2>
+      <p>
+        Upload the raw HTML "Project Report" exported from your EDX/EDAX software.
+        The app pulls out each Site's <strong>Quant Results Summary</strong>, its images and
+        spectra, and lays them out in the standard analysis-report format &mdash; ready to
+        review, edit and export.
+      </p>
+      <button class="btn brass" id="chooseFileBtn">Choose HTML File&hellip;</button>
+      <input type="file" id="fileInput" accept=".html,.htm" />
+      <div id="fileNamePill"></div>
+      <div id="uploadError" class="upload-error" style="display:none;"></div>
+    </div>
+    <div class="upload-steps">
+      <div class="step"><b>1. Upload</b>Pick the source report HTML file</div>
+      <div class="step"><b>2. Edit</b>Click any text or table cell to edit it, tick which spectra to keep</div>
+      <div class="step"><b>3. Preview</b>See exactly what will be exported</div>
+      <div class="step"><b>4. Export</b>Download as HTML, Word or PDF</div>
+    </div>
+    <p class="upload-note">
+      The cover sheet and particle-assessment fields (report no., injector details, probable
+      source, reference photos, etc.) are not present in the raw EDX export, so those start
+      blank/default and are yours to fill in on the next screen &mdash; nothing is guessed for you.
+    </p>
+  </section>
+
+  <!-- ============ WORKSPACE SCREEN ============ -->
+  <section id="workspaceScreen" class="workspace" style="display:none;">
+    <aside class="side">
+      <div class="panel">
+        <h3>Report Summary</h3>
+        <div id="statsBox"></div>
+      </div>
+      <div class="panel">
+        <h3>Jump to Section</h3>
+        <ul class="nav-outline" id="outlineList"></ul>
+      </div>
+      <div class="panel">
+        <h3>What changed</h3>
+        <ul class="log-list" id="logList"></ul>
+      </div>
+      <div class="panel">
+        <h3>Report Options</h3>
+        <label class="opt-check-line">
+          <input type="checkbox" id="includeCommentsToggle" checked />
+          <span>Include Comments table</span>
+        </label>
+        <div class="opt-field">
+          <label for="preparedBySelect">Prepared by</label>
+          <select id="preparedBySelect">
+            <option value="">&mdash; Select &mdash;</option>
+            <option value="N R Khairnar">N R Khairnar</option>
+          </select>
+        </div>
+        <div class="opt-field">
+          <label for="releasedBySelect">Released by</label>
+          <select id="releasedBySelect">
+            <option value="">&mdash; Select &mdash;</option>
+            <option value="J R Nagrale PS/QMM8-NaP">J R Nagrale PS/QMM8-NaP</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint-box">
+        Click any title, note or table cell to edit it directly. Fields on the cover sheet
+        marked "Sample / Type / ID" and the Project/Owner box are shared across every page of
+        the same specimen &mdash; edit once and every page updates.
+      </div>
+      <button class="btn ghost" id="startOverBtn" style="align-self:flex-start;">&larr; Start Over</button>
+    </aside>
+
+    <div class="canvas-wrap">
+      <div class="canvas-toolbar">
+        <div class="edit-tip"><span class="dot"></span> Click any text or table cell to edit it directly</div>
+        <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn small brass" id="previewBtn">Preview &amp; Export &rarr;</button>
+        </div>
+      </div>
+      <div id="reportRoot"></div>
+    </div>
+  </section>
+
+  <!-- ============ PREVIEW SCREEN ============ -->
+  <section id="previewScreen" class="workspace" style="display:none;">
+    <aside class="side">
+      <div class="panel">
+        <h3>Preview</h3>
+        <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin:0;">
+          This is exactly what will be exported &mdash; excluded images, unticked checkboxes
+          and any hidden Comments column are already applied. Go back to Edit if anything
+          needs changing.
+        </p>
+      </div>
+      <button class="btn ghost" id="backToEditBtn" style="align-self:flex-start;">&larr; Back to Edit</button>
+    </aside>
+
+    <div class="canvas-wrap">
+      <div class="canvas-toolbar">
+        <div class="edit-tip"><span class="dot"></span> Read-only preview of the final report</div>
+        <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn small" id="exportHtmlBtn">Export HTML</button>
+          <button class="btn small" id="exportDocBtn">Export Word</button>
+          <button class="btn small" id="exportPdfBtn">Export PDF</button>
+          <button class="btn small brass" id="exportBothBtn">Export Word + PDF</button>
+        </div>
+      </div>
+      <div id="previewRoot"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-foot">Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     0. Small utilities
+  ============================================================ */
+  const $ = (sel, root) => (root||document).querySelector(sel);
+  const $all = (sel, root) => Array.from((root||document).querySelectorAll(sel));
+
+  function showToast(msg, isError){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.toggle('error', !!isError);
+    t.classList.add('show');
+    clearTimeout(showToast._h);
+    showToast._h = setTimeout(()=> t.classList.remove('show'), 3400);
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function cleanText(s){ return String(s == null ? '' : s).replace(/\s+/g,' ').trim(); }
+
+  function uid(prefix){
+    uid._n = (uid._n||0) + 1;
+    return (prefix||'id') + '_' + uid._n + '_' + Math.random().toString(36).slice(2,7);
+  }
+
+  function todayStr(){
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    return dd + '.' + mm + '.' + d.getFullYear();
+  }
+  function nowStamp(){
+    const d = new Date();
+    let h = d.getHours(); const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12; if (h===0) h = 12;
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return todayStr() + ' ' + h + ':' + mi + ' ' + ampm;
+  }
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 4000);
+  }
+  function baseName(name){
+    return (name||'report').replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g,'_').slice(0,80) || 'report';
+  }
+  function fileToDataUrl(file){
+    return new Promise((resolve, reject)=>{
+      const r = new FileReader();
+      r.onload = ()=> resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  /* ============================================================
+     1. Parsing the source "Project Report" HTML into a tree
+        The source format uses <div id><hN class="content-title">
+        pairs. Actual DOM nesting is inconsistent (some sections are
+        true children, some are document-order siblings), so we
+        rebuild the logical hierarchy purely from heading LEVEL,
+        walking the document in order (an "outline" algorithm),
+        exactly like nested markdown headings.
+  ============================================================ */
+
+  function parseSourceReport(htmlText){
+    const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+    const root = doc.querySelector('main') || doc.body;
+    if (!root) throw new Error('This does not look like a valid HTML report (no <body> found).');
+
+    const flat = [];
+    function isSectionDiv(elm){
+      if (!elm || elm.tagName !== 'DIV') return false;
+      const first = elm.firstElementChild;
+      return !!(first && /^H[1-6]$/.test(first.tagName) && first.classList.contains('content-title'));
+    }
+    function walk(elm){
+      for (const child of Array.from(elm.children)){
+        if (isSectionDiv(child)){
+          const h = child.firstElementChild;
+          const level = parseInt(h.tagName.slice(1), 10);
+          const title = cleanText(h.textContent);
+          const ownEl = document.createElement('div');
+          for (const gc of Array.from(child.children)){
+            if (gc === h) continue;
+            if (isSectionDiv(gc)) continue;
+            ownEl.appendChild(gc.cloneNode(true));
+          }
+          flat.push({ level, title, own: ownEl, children: [] });
+          walk(child);
+        } else {
+          walk(child);
+        }
+      }
+    }
+    walk(root);
+    if (!flat.length) throw new Error('No report sections were found. Make sure this is an EDX/EDAX "Project Report" HTML export.');
+
+    const rootNode = { level: 0, title: '', children: [] };
+    const stack = [rootNode];
+    for (const entry of flat){
+      while (stack[stack.length-1].level >= entry.level) stack.pop();
+      stack[stack.length-1].children.push(entry);
+      stack.push(entry);
+    }
+
+    const projectNode = rootNode.children.find(c => c.level === 1) || rootNode.children[0];
+    if (!projectNode) throw new Error('Could not find the project title section (missing <h1>).');
+
+    return buildReportModel(projectNode);
+  }
+
+  function findChild(node, matcher){ return (node.children||[]).find(matcher); }
+  function findChildren(node, matcher){ return (node.children||[]).filter(matcher); }
+  function isTitled(name){ const n = name.toLowerCase(); return (c) => cleanText(c.title).toLowerCase() === n; }
+
+  function extractDetailsRows(ownEl){
+    const table = ownEl.querySelector('table');
+    if (!table) return [];
+    const rows = [];
+    $all('tr', table).forEach(tr=>{
+      const cells = $all('td,th', tr);
+      if (cells.length >= 2){
+        rows.push({ label: cleanText(cells[0].innerHTML.replace(/<br\s*\/?>/gi,' ')), value: cleanText(cells[1].textContent) });
+      } else if (cells.length === 1){
+        rows.push({ label: '', value: cleanText(cells[0].textContent) });
+      }
+    });
+    return rows;
+  }
+
+  function extractSummaryTable(ownEl){
+    const table = ownEl.querySelector('table');
+    if (!table) return null;
+    const trs = $all('tr', table);
+    if (!trs.length) return null;
+    const headerCells = $all('th', trs[0]);
+    const headers = headerCells.length ? headerCells.map(c => cleanText(c.textContent)) : $all('td', trs[0]).map(c => cleanText(c.textContent));
+    const rows = trs.slice(1).map(tr => $all('td', tr).map(c => cleanText(c.textContent)));
+    return { headers, rows: rows.filter(r => r.length) };
+  }
+
+  function extractImages(ownEl){
+    return $all('img', ownEl).map(img => ({ src: img.getAttribute('src') || '', alt: img.getAttribute('alt') || '' }));
+  }
+
+  function buildReportModel(projectNode){
+    const log = [];
+    const details = findChild(projectNode, isTitled('details'));
+    const project = {
+      title: cleanText(projectNode.title) || 'Untitled Project',
+      detailsRows: details ? extractDetailsRows(details.own) : [],
+      owner: '',
+      specimens: []
+    };
+
+    const specimenNodes = findChildren(projectNode, c => c.level === 2 && cleanText(c.title).toLowerCase() !== 'details');
+    specimenNodes.forEach(specNode => {
+      const specDetails = findChild(specNode, isTitled('details'));
+      const specimen = {
+        title: cleanText(specNode.title) || 'Specimen',
+        detailsRows: specDetails ? extractDetailsRows(specDetails.own) : [],
+        sites: []
+      };
+
+      const siteNodes = findChildren(specNode, c => c.level === 3 && cleanText(c.title).toLowerCase() !== 'details');
+      siteNodes.forEach(siteNode => {
+        const site = { title: cleanText(siteNode.title) || 'Site', summary: null, electronImageGroups: [], spectra: [] };
+
+        (siteNode.children||[]).forEach(child => {
+          const t = cleanText(child.title).toLowerCase();
+          if (t === 'quant results summary'){
+            site.summary = extractSummaryTable(child.own);
+            if (!site.summary) log.push({type:'warn', text:`"${site.title}": Quant Results Summary table was empty or unreadable.`});
+          } else if (t === 'electron images'){
+            const imgs = extractImages(child.own);
+            const detailsChildren = findChildren(child, isTitled('details'));
+            const detailBlocks = detailsChildren.map(dc => extractDetailsRows(dc.own));
+            imgs.forEach((im, i) => {
+              site.electronImageGroups.push({
+                id: uid('img'), src: im.src, alt: im.alt || `Electron Image ${i+1}`,
+                detailsRows: detailBlocks[i] || detailBlocks[0] || [], include: true
+              });
+            });
+          } else if (t === 'details'){
+            /* stray duplicate - ignore */
+          } else if (/^\d+$/.test(cleanText(child.title))){
+            const imgs = extractImages(child.own);
+            const quant = findChild(child, isTitled('quant results'));
+            const spectrumDetails = findChild(child, isTitled('details'));
+            if (quant){
+              log.push({type:'removed', text:`Site "${site.title}", Spectrum ${cleanText(child.title)}: removed the individual "Quant Results" table (per-spectrum results are excluded; only the Quant Results Summary is kept).`});
+            }
+            site.spectra.push({
+              id: uid('spec'), label: cleanText(child.title),
+              src: imgs[0] ? imgs[0].src : '', alt: imgs[0] ? (imgs[0].alt || cleanText(child.title)) : cleanText(child.title),
+              detailsRows: spectrumDetails ? extractDetailsRows(spectrumDetails.own) : [], include: true
+            });
+          }
+        });
+
+        if (!site.summary){
+          log.push({type:'warn', text:`Site "${site.title}" has no Quant Results Summary table in the source file.`});
+        }
+        specimen.sites.push(site);
+      });
+
+      project.specimens.push(specimen);
+    });
+
+    return { project, log };
+  }
+
+  /* ============================================================
+     2. Rendering the report model into the editable canvas,
+        laid out to match the standard analysis-report template:
+        navy title bar, two info boxes, image + quant-table column
+        on the left, particle "Comment" assessment column on the right.
+  ============================================================ */
+
+  let MODEL = null;
+  let SOURCE_FILE_NAME = 'report';
+
+  function el(tag, attrs, children){
+    const e = document.createElement(tag);
+    if (attrs) for (const k in attrs){
+      if (k === 'class') e.className = attrs[k];
+      else if (k === 'html') e.innerHTML = attrs[k];
+      else if (k === 'text') e.textContent = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    }
+    if (attrs && attrs.contenteditable === 'true') e.spellcheck = false;
+    (children||[]).forEach(c => { if (c) e.appendChild(c); });
+    return e;
+  }
+
+  // ---- live "echo" sync: edit a master field, all linked copies update ----
+  const echoGroups = {}; // key -> [elements]
+  const echoMasterAssigned = {}; // key -> true once the first (editable) copy has been created
+  function registerEcho(key, node, isMaster){
+    if (!echoGroups[key]) echoGroups[key] = [];
+    echoGroups[key].push(node);
+    if (isMaster){
+      node.addEventListener('input', ()=>{
+        const text = node.textContent;
+        echoGroups[key].forEach(n => { if (n !== node) n.textContent = text; });
+      });
+    }
+  }
+  // First call for a given key becomes the single editable "master"; every
+  // later call for the same key is a read-only echo kept in sync with it.
+  function echoField(key, initialText, tag){
+    const isMaster = !echoMasterAssigned[key];
+    if (isMaster) echoMasterAssigned[key] = true;
+    const node = el(tag || 'span', { contenteditable: isMaster ? 'true' : 'false', text: initialText || '' });
+    if (!isMaster) node.style.cursor = 'default';
+    registerEcho(key, node, isMaster);
+    return node;
+  }
+
+  function renderDetailsTable(rows){
+    if (!rows || !rows.length) return null;
+    const table = el('table', { class: 'details-mini' });
+    rows.forEach(r => {
+      table.appendChild(el('tr', null, [
+        el('td', { contenteditable:'true', text: r.label }),
+        el('td', { contenteditable:'true', text: r.value })
+      ]));
+    });
+    return table;
+  }
+
+  function renderQuantSection(site){
+    const wrap = el('div');
+    if (!site.summary || !site.summary.rows.length) return wrap; // silently omit, matches reference (no data = no section)
+
+    wrap.appendChild(el('p', { class:'proc-note', text:'Processing option : All elements analysed (Normalised)' }));
+
+    const table = el('table', { class:'quant-table' });
+    const thead = el('tr');
+    site.summary.headers.forEach(h => thead.appendChild(el('th', { contenteditable:'true', text: h })));
+    table.appendChild(thead);
+
+    // Split plain spectrum rows from trailing stat rows (Mean/Std deviation/Max/Min),
+    // matching the reference layout: data rows, blank spacer, stat rows, closing rule.
+    const statLabels = ['mean','std deviation','std. deviation','max.','max','min.','min'];
+    const dataRows = [];
+    const statRows = [];
+    site.summary.rows.forEach(r => {
+      const first = (r[0]||'').toLowerCase().replace(/\.$/,'');
+      if (statLabels.includes(first) || statLabels.includes((r[0]||'').toLowerCase())) statRows.push(r);
+      else dataRows.push(r);
+    });
+
+    dataRows.forEach(row => {
+      const tr = el('tr');
+      row.forEach(v => tr.appendChild(el('td', { contenteditable:'true', text: v })));
+      table.appendChild(tr);
+    });
+    if (statRows.length){
+      table.appendChild(el('tr', { class:'spacer' }, [ el('td', { colspan: String(site.summary.headers.length) }) ]));
+      statRows.forEach((row, i) => {
+        const tr = el('tr', { class:'stat-row' + (i === statRows.length-1 ? ' last-row' : '') });
+        row.forEach(v => tr.appendChild(el('td', { contenteditable:'true', text: v })));
+        table.appendChild(tr);
+      });
+    } else {
+      const lastTr = table.lastElementChild;
+      if (lastTr) lastTr.classList.add('last-row');
+    }
+
+    wrap.appendChild(table);
+    wrap.appendChild(el('p', { class:'weight-note', text:'All results in weight%' }));
+    return wrap;
+  }
+
+  function renderImageSlot(item, kind){
+    const slot = el('div', { class:'img-slot', 'data-id': item.id });
+    const check = el('input', { type:'checkbox', class:'chk-box' });
+    check.checked = true;
+    check.addEventListener('change', ()=>{
+      item.include = check.checked;
+      slot.classList.toggle('excluded', !check.checked);
+    });
+    const overlay = el('label', { class:'sel-overlay' }, [
+      check,
+      el('span', { text: kind === 'electron' ? 'Include image' : ('Include spectrum ' + item.label) })
+    ]);
+    const img = el('img', { src: item.src, alt: item.alt });
+    slot.appendChild(img);
+    slot.appendChild(overlay);
+    return slot;
+  }
+
+  function renderImagesColumn(site){
+    const col = el('div', { class:'img-col' });
+
+    if (site.electronImageGroups.length){
+      if (site.electronImageGroups.length > 1){
+        const row = el('div', { class:'site-select-row' }, [
+          el('span', { class:'lbl', text:'Electron images:' }),
+          el('button', { type:'button', text:'All' }),
+          el('button', { type:'button', text:'None' })
+        ]);
+        row.children[1].addEventListener('click', ()=> $all('input[type=checkbox]', imgWrap).forEach(cb=>{cb.checked=true;cb.dispatchEvent(new Event('change'));}));
+        row.children[2].addEventListener('click', ()=> $all('input[type=checkbox]', imgWrap).forEach(cb=>{cb.checked=false;cb.dispatchEvent(new Event('change'));}));
+        col.appendChild(row);
+      }
+      var imgWrap = el('div');
+      site.electronImageGroups.forEach(g => imgWrap.appendChild(renderImageSlot(g, 'electron')));
+      col.appendChild(imgWrap);
+    }
+
+    if (site.spectra.length){
+      const row = el('div', { class:'site-select-row' }, [
+        el('span', { class:'lbl', text:'Spectra:' }),
+        el('button', { type:'button', text:'All' }),
+        el('button', { type:'button', text:'None' })
+      ]);
+      const specWrap = el('div');
+      site.spectra.forEach(sp => { if (sp.src) specWrap.appendChild(renderImageSlot(sp, 'spectrum')); });
+      row.children[1].addEventListener('click', ()=> $all('input[type=checkbox]', specWrap).forEach(cb=>{cb.checked=true;cb.dispatchEvent(new Event('change'));}));
+      row.children[2].addEventListener('click', ()=> $all('input[type=checkbox]', specWrap).forEach(cb=>{cb.checked=false;cb.dispatchEvent(new Event('change'));}));
+      col.appendChild(row);
+      col.appendChild(specWrap);
+    }
+
+    col.appendChild(renderQuantSection(site));
+    return col;
+  }
+
+  // ---- Particle "Comment" assessment box (right column) ----
+  const PARTICLE_FIELDS = [
+    ['Particle Details', ''],
+    ['Length in \u00b5m', ''],
+    ['Width in \u00b5m', ''],
+    ['Chemistry', ''],
+    ['Surfacing coating', ''],
+    ['Probable Injector material source', ''],
+    ['Probable Indirect material source at NaP', '__photos__'],
+    ['Probable source from pump', ''],
+    ['Probable external material source', ''],
+    ['Remarks', '']
+  ];
+
+  // Pulls the µm figure out of an Electron Image "Details" row value such as
+  // "1024 pixels, 375 \u00b5m" -> "375 \u00b5m". Returns '' if the label/unit isn't found.
+  function extractMicronValue(detailsRows, label){
+    if (!detailsRows || !detailsRows.length) return '';
+    const row = detailsRows.find(r => cleanText(r.label).toLowerCase() === label.toLowerCase());
+    if (!row) return '';
+    const m = String(row.value || '').match(/([\d.]+)\s*(?:\u00b5m|\u03bcm)/i);
+    return m ? (m[1] + ' \u00b5m') : '';
+  }
+
+  function renderPhotoField(){
+    const wrap = el('div');
+    const grid = el('div', { class:'photo-mini-grid' });
+    const addBtn = el('button', { type:'button', class:'add-photo-btn', text:'+ Add reference photo' });
+    const fileInput = el('input', { type:'file', accept:'image/*', class:'hidden-file-input', multiple:'multiple' });
+
+    function addPhoto(dataUrl, label){
+      const row = el('div', { class:'photo-mini' }, [
+        el('img', { src: dataUrl }),
+        el('span', { class:'pm-label', contenteditable:'true', text: label || 'Reference photo' }),
+        el('button', { type:'button', class:'pm-remove', title:'Remove', text:'\u2715' })
+      ]);
+      row.querySelector('.pm-remove').addEventListener('click', ()=> row.remove());
+      grid.appendChild(row);
+    }
+    addBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', async ()=>{
+      const files = Array.from(fileInput.files || []);
+      for (const f of files){
+        try{ const url = await fileToDataUrl(f); addPhoto(url, f.name.replace(/\.[^.]+$/,'')); }catch(e){ /* ignore */ }
+      }
+      fileInput.value = '';
+    });
+
+    wrap.appendChild(grid);
+    wrap.appendChild(addBtn);
+    wrap.appendChild(fileInput);
+    return wrap;
+  }
+
+  function renderCommentBox(specimenIdx, siteIdx, site){
+    const box = el('div', { class:'comment-box' });
+    const title = el('div', { class:'cb-title' }, [
+      el('span', { text:'Comment:' }),
+      el('button', { type:'button', class:'copy-btn', text:'Copy from previous site' })
+    ]);
+    box.appendChild(title);
+
+    // Length/Width prefill, taken from the site's first Electron Image's
+    // "Image Height" / "Image Width" detail rows (µm figure only).
+    const firstImg = site && site.electronImageGroups && site.electronImageGroups[0];
+    const lengthPrefill = firstImg ? extractMicronValue(firstImg.detailsRows, 'Image Height') : '';
+    const widthPrefill = firstImg ? extractMicronValue(firstImg.detailsRows, 'Image Width') : '';
+
+    const table = el('table', { class:'comment-table' });
+    PARTICLE_FIELDS.forEach(([label, special]) => {
+      const labelCell = el('td', { class:'c-label', contenteditable:'true', text: label });
+      let valueCell;
+      if (special === '__photos__'){
+        valueCell = el('td', { class:'c-value' }, [ renderPhotoField() ]);
+      } else {
+        let prefill = '';
+        if (label === 'Length in \u00b5m') prefill = lengthPrefill;
+        else if (label === 'Width in \u00b5m') prefill = widthPrefill;
+        valueCell = el('td', { class:'c-value', contenteditable:'true', text: prefill });
+      }
+      table.appendChild(el('tr', null, [ labelCell, valueCell ]));
+    });
+    box.appendChild(table);
+
+    title.querySelector('.copy-btn').addEventListener('click', ()=>{
+      const prev = document.querySelector(`.comment-box[data-specimen="${specimenIdx}"][data-site="${siteIdx-1}"]`);
+      if (!prev){ showToast('No previous site in this specimen to copy from.', true); return; }
+      const prevTable = prev.querySelector('table.comment-table');
+      table.parentNode.replaceChild(prevTable.cloneNode(true), table);
+      showToast('Copied particle details from the previous site.');
+    });
+
+    box.dataset.specimen = specimenIdx;
+    box.dataset.site = siteIdx;
+    return box;
+  }
+
+  // Two-column layouts are built as real <table> elements (not CSS grid/
+  // flexbox) so they render identically in a live browser, an exported
+  // HTML file, and Microsoft Word/LibreOffice — Word's HTML engine does
+  // not support grid or flexbox at all, and tables are the one layout
+  // primitive every one of those renderers agrees on.
+  function twoColTable(leftCell, rightCell, cls){
+    const table = el('table', { class: cls || 'twocol', role:'presentation' });
+    const tr = el('tr');
+    tr.appendChild(el('td', { class:'twocol-l' }, [leftCell]));
+    tr.appendChild(el('td', { class:'twocol-r' }, [rightCell]));
+    table.appendChild(tr);
+    return table;
+  }
+
+  function renderInfoRow(specimenIdx, site){
+    const leftBox = el('div', { class:'info-box' });
+    const l1 = el('div', { class:'ln' });
+    l1.appendChild(document.createTextNode('Project: '));
+    l1.appendChild(echoField('projectTitle', MODEL.project.title, 'span'));
+    leftBox.appendChild(l1);
+    const l2 = el('div', { class:'ln' });
+    l2.appendChild(document.createTextNode('Owner: '));
+    l2.appendChild(echoField('projectOwner', MODEL.project.owner || '', 'span'));
+    leftBox.appendChild(l2);
+    const l3 = el('div', { class:'ln' });
+    l3.appendChild(document.createTextNode('Site: '));
+    l3.appendChild(el('span', { contenteditable:'true', text: site.title }));
+    leftBox.appendChild(l3);
+
+    const rightBox = el('div', { class:'info-box' });
+    const r1 = el('div', { class:'ln' });
+    r1.appendChild(document.createTextNode('Sample: '));
+    r1.appendChild(echoField('specimenSample_' + specimenIdx, 'Sample 1', 'span'));
+    rightBox.appendChild(r1);
+    const r2 = el('div', { class:'ln' });
+    r2.appendChild(document.createTextNode('Type: '));
+    r2.appendChild(echoField('specimenType_' + specimenIdx, 'Default', 'span'));
+    rightBox.appendChild(r2);
+    const r3 = el('div', { class:'ln' });
+    r3.appendChild(document.createTextNode('ID: '));
+    r3.appendChild(echoField('specimenId_' + specimenIdx, '', 'span'));
+    rightBox.appendChild(r3);
+
+    return twoColTable(leftBox, rightBox, 'twocol info-row');
+  }
+
+  function renderSiteSheet(specimenIdx, siteIdx, site){
+    const sheet = el('div', { class:'sheet', id: 'specimen_'+specimenIdx+'_site_'+siteIdx });
+
+    const titleCell = echoField('projectTitle', MODEL.project.title, 'span');
+    titleCell.classList.add('proj-title');
+    const tsCell = el('span', { class:'ts', text: nowStamp() });
+    const barTable = el('table', { class:'site-header-bar', role:'presentation' }, [
+      el('tr', null, [
+        el('td', { class:'bar-title' }, [titleCell]),
+        el('td', { class:'bar-ts' }, [tsCell])
+      ])
+    ]);
+    sheet.appendChild(barTable);
+
+    sheet.appendChild(renderInfoRow(specimenIdx, site));
+
+    const contentRow = twoColTable(renderImagesColumn(site), renderCommentBox(specimenIdx, siteIdx, site), 'twocol content-row');
+    sheet.appendChild(contentRow);
+
+    return sheet;
+  }
+
+  // ---- Cover page (page 1) ----
+  function coverPair(labelText, valueText, boldValue){
+    return [
+      el('td', { class:'lbl', contenteditable:'true', text: labelText }),
+      el('td', { class:'val', contenteditable:'true', text: valueText||'' })
+    ];
+  }
+  function coverRow(cells){ return el('tr', null, cells); }
+  function coverSection(text, colspan){ return coverRow([ el('td', { class:'sec', colspan:String(colspan||4), contenteditable:'true', text: text }) ]); }
+  function coverChecklistRow(text){
+    const cb = el('input', { type:'checkbox', class:'chk-box' });
+    const line = el('label', { class:'chk-line' }, [ cb, el('span', { text: text }) ]);
+    const indicator = el('td', { class:'val chk-indicator', colspan:'1', text:'\u2717' });
+    cb.addEventListener('change', ()=>{ indicator.textContent = cb.checked ? '\u2713' : '\u2717'; });
+    return el('tr', { class:'chk-row' }, [ el('td', { colspan:'3' }, [line]), indicator ]);
+  }
+
+  function renderCover(model){
+    const table = el('table', { class:'cover-grid' });
+
+    table.appendChild(el('tr', { class:'cover-title-row' }, [
+      el('td', { class:'small', style:'width:220px;', contenteditable:'true', text:'PS/QMM8-NaP' }),
+      el('td', { class:'big', colspan:'3', contenteditable:'true', text:'Material analysis report' })
+    ]));
+
+    table.appendChild(coverRow([...coverPair('Report Date', todayStr()), ...coverPair('Report No.', '')]));
+    table.appendChild(coverRow([...coverPair('Production', ''), ...coverPair('0 KM', '')]));
+    const investCb = el('input', { type:'checkbox', class:'chk-box' });
+    const investInd = el('td', { class:'val chk-indicator', text:'\u2717' });
+    const fieldCb = el('input', { type:'checkbox', class:'chk-box' });
+    const fieldInd = el('td', { class:'val chk-indicator', text:'\u2717' });
+    investCb.addEventListener('change', ()=>{ investInd.textContent = investCb.checked ? '\u2713' : '\u2717'; });
+    fieldCb.addEventListener('change', ()=>{ fieldInd.textContent = fieldCb.checked ? '\u2713' : '\u2717'; });
+    table.appendChild(coverRow([
+      el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ investCb, el('span',{text:'Investigation'}) ]) ]),
+      investInd,
+      el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ fieldCb, el('span',{text:'Field'}) ]) ]),
+      fieldInd
+    ]));
+    table.appendChild(coverRow([...coverPair('Issued By', ': PS/QMM8-NaP'), ...coverPair('', '')]));
+    table.appendChild(coverRow([...coverPair('Distribution', ''), ...coverPair('', '')]));
+    table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:'Subject'}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:': Material grade and probable source identification of particles.'}) ]));
+    table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:'1) Task'}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:': Material analysis and dimensional measurement of particles.'}) ]));
+
+    table.appendChild(coverSection('2) Performed tests'));
+    ['Scanning Electron Microscope','EDAX - Analysis','Optical Microscope','Hardness measurement'].forEach((t,i)=>{
+      table.appendChild(coverChecklistRow((i+1)+'. '+t));
+    });
+
+    table.appendChild(coverSection('3) Sample preparation for SEM and EDAX:'));
+    table.appendChild(coverRow([ el('td',{class:'val',colspan:'4',contenteditable:'true',text:'Particles placed on carbon tape stub.'}) ]));
+
+    table.appendChild(coverSection('4) Sample preparation for microstructure investigation:'));
+    table.appendChild(coverRow([ el('td',{class:'val',colspan:'4',contenteditable:'true',text:''}) ]));
+
+    table.appendChild(coverSection('5) Calibration'));
+    table.appendChild(coverRow([ el('td',{class:'val',colspan:'4',contenteditable:'true',text:'EDAX Unit was calibrated with cobalt reference standard. EDAX analysis was performed under similar conditions with the following SEM/EDAX parameters.'}) ]));
+    table.appendChild(coverRow([...coverPair('EHT', '20KV'), ...coverPair('WD', '8.5mm')]));
+    table.appendChild(coverRow([...coverPair('Spot size', ''), ...coverPair('Signal', 'SE/BSD')]));
+    table.appendChild(coverRow([...coverPair('Dead time', '30-40%'), ...coverPair('Live time', "50'")]));
+
+    table.appendChild(coverSection('6) Sample details'));
+    [['Requisition Dept.',''], ['Requisition dept complaint No.',''], ['External Customer',''],
+     ['Injector no.',''], ['Mfd & Sr. no.',''], ['Location of particle',''], ['Sample Submission date','']
+    ].forEach(([l,v]) => table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:l}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:v}) ])));
+
+    table.appendChild(coverRow([
+      el('td', { class:'lbl', contenteditable:'true', text:'Prepared by' }),
+      el('td', { class:'val', id:'preparedByCell', contenteditable:'true', text:'' }),
+      el('td', { class:'lbl', contenteditable:'true', text:'Released by' }),
+      el('td', { class:'val', id:'releasedByCell', contenteditable:'true', text:'' })
+    ]));
+
+    const sheet = el('div', { class:'sheet' }, [ table ]);
+    return sheet;
+  }
+
+  function renderReport(model){
+    const root = el('div', { id:'reportRootInner' });
+    root.appendChild(renderCover(model));
+
+    model.project.specimens.forEach((specimen, sIdx) => {
+      specimen.sites.forEach((site, siteIdx) => {
+        root.appendChild(renderSiteSheet(sIdx, siteIdx, site));
+      });
+    });
+
+    return root;
+  }
+
+  function renderOutline(model){
+    const list = $('#outlineList');
+    list.innerHTML = '';
+    model.project.specimens.forEach((sp, sIdx) => {
+      list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#specimen_'+sIdx+'_site_0', text: sp.title }) ]));
+      sp.sites.forEach((site, siteIdx) => {
+        list.appendChild(el('li', { class:'lvl-3' }, [ el('a', { href:'#specimen_'+sIdx+'_site_'+siteIdx, text: site.title }) ]));
+      });
+    });
+  }
+
+  function renderStats(model){
+    let specimens = model.project.specimens.length;
+    let sites = 0, images = 0, spectra = 0, summaries = 0;
+    model.project.specimens.forEach(sp => sp.sites.forEach(site => {
+      sites++;
+      if (site.summary && site.summary.rows.length) summaries++;
+      images += site.electronImageGroups.length;
+      spectra += site.spectra.length;
+    }));
+    const removedQuant = model.log.filter(l => l.type === 'removed').length;
+    const box = $('#statsBox');
+    box.innerHTML = '';
+    [['Specimens', specimens], ['Sites', sites], ['Summary tables kept', summaries],
+     ['Electron images', images], ['Spectra found', spectra], ['Per-spectrum results removed', removedQuant]
+    ].forEach(([label, val]) => box.appendChild(el('div', { class:'row' }, [ el('span', { text: label }), el('span', { text: String(val) }) ])));
+  }
+
+  function renderLog(model){
+    const list = $('#logList');
+    list.innerHTML = '';
+    if (!model.log.length){
+      list.appendChild(el('li', { text:'No issues detected. All Quant Results Summary tables and images were found.' }));
+      return;
+    }
+    model.log.forEach(item => list.appendChild(el('li', { class: item.type === 'removed' ? 'removed' : '', text: item.text })));
+  }
+
+  /* ============================================================
+     3. Screen switching / upload handling
+  ============================================================ */
+
+  function goToWorkspace(model, fileName){
+    MODEL = model;
+    SOURCE_FILE_NAME = fileName;
+    for (const k in echoGroups) delete echoGroups[k];
+    for (const k in echoMasterAssigned) delete echoMasterAssigned[k];
+
+    $('#uploadScreen').style.display = 'none';
+    $('#workspaceScreen').style.display = 'grid';
+    $('#stepperLabel').innerHTML = '<b>Step 2</b>&nbsp;&middot;&nbsp;Edit &amp; select spectra, then preview';
+
+    const rr = $('#reportRoot');
+    rr.innerHTML = '';
+    rr.appendChild(renderReport(model));
+    $all('[contenteditable]', rr).forEach(n => { n.spellcheck = false; });
+
+    renderOutline(model);
+    renderStats(model);
+    renderLog(model);
+  }
+
+  function resetToUpload(){
+    MODEL = null;
+    $('#workspaceScreen').style.display = 'none';
+    $('#previewScreen').style.display = 'none';
+    $('#uploadScreen').style.display = 'flex';
+    $('#stepperLabel').innerHTML = '<b>Step 1</b>&nbsp;&middot;&nbsp;Upload source report';
+    $('#fileInput').value = '';
+    $('#fileNamePill').innerHTML = '';
+    $('#uploadError').style.display = 'none';
+  }
+
+  // Builds a read-only preview showing exactly what export will produce
+  // (excluded images gone, checkboxes swapped for their tick/cross text,
+  // Comments column dropped if the toggle is off) using the same cleanup
+  // pass the exporters use, so the preview and the exported files can't
+  // drift apart.
+  function goToPreview(){
+    if (!MODEL) return;
+    const clean = buildCleanReportHTML();
+    const pr = $('#previewRoot');
+    pr.innerHTML = '';
+    pr.appendChild(clean);
+
+    $('#workspaceScreen').style.display = 'none';
+    $('#previewScreen').style.display = 'grid';
+    $('#stepperLabel').innerHTML = '<b>Step 3</b>&nbsp;&middot;&nbsp;Preview &amp; export';
+    window.scrollTo(0, 0);
+  }
+
+  function backToEdit(){
+    $('#previewScreen').style.display = 'none';
+    $('#workspaceScreen').style.display = 'grid';
+    $('#stepperLabel').innerHTML = '<b>Step 2</b>&nbsp;&middot;&nbsp;Edit &amp; select spectra, then preview';
+    window.scrollTo(0, 0);
+  }
+
+  function handleFile(file){
+    if (!file) return;
+    const errBox = $('#uploadError');
+    errBox.style.display = 'none';
+    if (!/\.html?$/i.test(file.name)){
+      errBox.textContent = 'Please choose an .html or .htm file.';
+      errBox.style.display = 'block';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const model = parseSourceReport(e.target.result);
+        $('#fileNamePill').innerHTML = '<span class="file-name-pill">' + escapeHtml(file.name) + '</span>';
+        goToWorkspace(model, file.name);
+        showToast('Report loaded: ' + model.project.specimens.reduce((a,s)=>a+s.sites.length,0) + ' site(s) found.');
+      } catch(err){
+        console.error(err);
+        errBox.textContent = 'Could not read this file: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+    reader.onerror = function(){
+      errBox.textContent = 'The file could not be read. Please try again.';
+      errBox.style.display = 'block';
+    };
+    reader.readAsText(file);
+  }
+
+  $('#chooseFileBtn').addEventListener('click', ()=> $('#fileInput').click());
+  $('#fileInput').addEventListener('change', (e)=> handleFile(e.target.files[0]));
+  $('#startOverBtn').addEventListener('click', ()=>{
+    resetToUpload();
+    $('#includeCommentsToggle').checked = true;
+    $('#preparedBySelect').value = '';
+    $('#releasedBySelect').value = '';
+  });
+  $('#previewBtn').addEventListener('click', goToPreview);
+  $('#backToEditBtn').addEventListener('click', backToEdit);
+
+  // Report Options: include/exclude Comments table (visual toggle only —
+  // buildCleanReportHTML() removes the column for real at export time).
+  $('#includeCommentsToggle').addEventListener('change', function(){
+    const rr = $('#reportRoot');
+    if (rr) rr.classList.toggle('hide-comments', !this.checked);
+  });
+
+  // Report Options: Prepared by / Released by presets fill the cover-sheet
+  // fields, which stay contenteditable so they can still be edited by hand.
+  $('#preparedBySelect').addEventListener('change', function(){
+    const cell = $('#preparedByCell');
+    if (cell) cell.textContent = this.value;
+  });
+  $('#releasedBySelect').addEventListener('change', function(){
+    const cell = $('#releasedByCell');
+    if (cell) cell.textContent = this.value;
+  });
+
+  const dropCard = $('#dropCard');
+  ['dragenter','dragover'].forEach(evt => dropCard.addEventListener(evt, (e)=>{ e.preventDefault(); dropCard.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(evt => dropCard.addEventListener(evt, (e)=>{ e.preventDefault(); dropCard.classList.remove('drag'); }));
+  dropCard.addEventListener('drop', (e)=>{ const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); });
+
+  /* ============================================================
+     4. Building a clean, exportable copy of the report
+  ============================================================ */
+
+  function buildCleanReportHTML(){
+    const src = $('#reportRoot');
+    const clone = src.cloneNode(true);
+
+    $all('.img-slot.excluded', clone).forEach(n => n.remove());
+    $all('.sel-overlay', clone).forEach(n => n.remove());
+    $all('.site-select-row', clone).forEach(n => n.remove());
+    $all('.cb-title .copy-btn', clone).forEach(n => n.remove());
+    $all('.add-photo-btn, .hidden-file-input', clone).forEach(n => n.remove());
+    $all('.pm-remove', clone).forEach(n => n.remove());
+
+    const includeComments = $('#includeCommentsToggle') ? $('#includeCommentsToggle').checked : true;
+    if (!includeComments){
+      $all('table.content-row', clone).forEach(row => {
+        const rightTd = row.querySelector('td.twocol-r');
+        if (rightTd) rightTd.remove();
+        const leftTd = row.querySelector('td.twocol-l');
+        if (leftTd) leftTd.style.width = '100%';
+      });
+    }
+
+    $all('input[type=checkbox]', clone).forEach(n => n.remove());
+    $all('[contenteditable]', clone).forEach(n => n.removeAttribute('contenteditable'));
+    return clone;
+  }
+
+  function getExportCss(){
+    return `
+      body{font-family:"Times New Roman", Georgia, serif;color:#111;font-size:13px;line-height:1.5;margin:0;padding:0;background:#eee;}
+      .sheet{background:#fff;width:210mm;min-height:297mm;max-width:100%;box-sizing:border-box;margin:0 auto 26px;padding:18mm 15mm;}
+      @page{ size:A4; margin:0; }
+      @media print{
+        body{background:#fff;}
+        .sheet{box-shadow:none;margin:0 auto;page-break-after:always;}
+      }
+      table{border-collapse:collapse;}
+      .cover-grid{width:100%;font-size:13px;}
+      .cover-grid td{border:1px solid #97a0bd;padding:5px 9px;vertical-align:top;}
+      .cover-title-row td{background:#000080;color:#fff;font-weight:700;border:1px solid #000080;padding:11px 14px;}
+      .cover-title-row td.big{font-size:17px;text-align:center;}
+      .cover-title-row td.small{font-size:14px;}
+      .cover-grid .lbl{color:#222;background:#f4f5fa;font-weight:600;width:230px;text-align:left;}
+      .cover-grid .sec{background:#e7e9f3;font-weight:700;}
+      .chk-row td{padding:4px 9px 4px 20px;}
+      .chk-line{display:flex;align-items:center;gap:8px;}
+      .cover-grid td.chk-indicator{text-align:center;font-weight:700;padding-left:9px;}
+      table.twocol{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;margin-bottom:14px;}
+      table.twocol td.twocol-l{width:53%;vertical-align:top;padding:0 8px 0 0;}
+      table.twocol td.twocol-r{width:47%;vertical-align:top;padding:0 0 0 8px;}
+      table.site-header-bar{width:100%;border-collapse:collapse;background:#000080;margin:0 0 14px;}
+      table.site-header-bar td{color:#fff;padding:12px 18px;vertical-align:baseline;}
+      table.site-header-bar td.bar-ts{text-align:right;white-space:nowrap;}
+      .site-header-bar .proj-title{font-size:16px;font-weight:600;}
+      .site-header-bar .ts{font-size:9.5px;color:#cfd4ef;white-space:nowrap;}
+      .info-box{border:1px solid #444;padding:9px 12px;font-size:12.5px;line-height:1.55;min-height:70px;}
+      .img-col img{width:100%;display:block;border:1px solid #999;margin-bottom:4px;}
+      .proc-note{font-size:12px;color:#222;margin:10px 0 4px;}
+      table.quant-table{width:100%;font-size:12.5px;margin:2px 0 4px;}
+      table.quant-table th{border-top:1.4px solid #111;border-bottom:1px solid #111;text-align:left;font-weight:700;padding:4px 10px 4px 0;}
+      table.quant-table td{padding:3px 10px 3px 0;text-align:left;white-space:nowrap;}
+      table.quant-table tr.spacer td{padding:4px 0;border:none;}
+      table.quant-table tr.last-row td{border-bottom:1.4px solid #111;}
+      .weight-note{font-size:11.5px;color:#333;margin:2px 0 16px;}
+      .no-quant-msg{font-size:11.5px;color:#5b6478;font-style:italic;font-family:"Segoe UI",sans-serif;margin:6px 0 14px;}
+      .comment-box{border:1px solid #444;}
+      .comment-box .cb-title{padding:8px 12px;font-size:12.5px;font-weight:600;border-bottom:1px solid #444;}
+      table.comment-table{width:100%;font-size:12.5px;}
+      table.comment-table td{border:1px solid #444;padding:6px 10px;vertical-align:top;}
+      table.comment-table td.c-label{width:150px;background:#fafafa;}
+      .photo-mini-grid{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
+      .photo-mini{display:flex;align-items:center;gap:7px;border:1px solid #e3e6ee;border-radius:4px;padding:3px 6px;font-family:"Segoe UI",sans-serif;font-size:10.5px;}
+      .photo-mini img{width:38px;height:30px;object-fit:cover;border-radius:2px;background:#ddd;flex:none;}
+      .specimen-title-row h2{font-size:17px;color:#0d1f5c;margin:0;font-weight:700;}
+      .specimen-notes{font-size:12px;color:#333;margin:4px 0 0;}
+      table.details-mini{font-size:12px;margin-top:6px;}
+      table.details-mini td{border:1px solid #c7cddb;padding:3px 8px;}
+      table.details-mini td:first-child{background:#f4f5fa;font-weight:600;width:170px;}
+    `;
+  }
+
+  function fullHtmlDocument(bodyEl, title){
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(title)}</title>
+<style>${getExportCss()}</style>
+</head>
+<body>
+${bodyEl.innerHTML}
+</body>
+</html>`;
+  }
+
+  /* ============================================================
+     5. Export: HTML
+  ============================================================ */
+  function exportHtml(){
+    if (!MODEL) return;
+    const clean = buildCleanReportHTML();
+    const html = fullHtmlDocument(clean, MODEL.project.title);
+    downloadBlob(new Blob([html], {type:'text/html'}), baseName(SOURCE_FILE_NAME) + '_report.html');
+    showToast('HTML report downloaded.');
+  }
+
+  /* ============================================================
+     6. Export: Word (.doc) — Word-compatible HTML, same technique
+        the reference report itself was produced with.
+  ============================================================ */
+  // Word's HTML import engine (and older LibreOffice/Google Docs importers)
+  // only reliably honours inline style="" attributes — <style> block rules,
+  // especially borders and background colors, are frequently dropped. So
+  // for the Word export specifically we bake the key visual rules directly
+  // onto each element as inline styles, in cascade order (base rule first,
+  // more specific rule after) so later assignments win exactly like CSS.
+  function inlineStylesForWord(root){
+    const apply = (sel, css) => $all(sel, root).forEach(n => {
+      const existing = (n.getAttribute('style') || '').trim();
+      const sep = existing && !existing.endsWith(';') ? ';' : '';
+      n.setAttribute('style', existing + sep + css);
+    });
+
+    apply('.sheet', 'background:#ffffff;width:210mm;margin:0 auto 26px auto;padding:18mm 15mm;font-family:"Times New Roman",Georgia,serif;page-break-after:always;page-break-inside:avoid;');
+
+    apply('table.cover-grid', 'width:100%;border-collapse:collapse;font-size:13px;font-family:"Times New Roman",Georgia,serif;');
+    apply('table.cover-grid td', 'border:1px solid #97a0bd;padding:5px 9px;vertical-align:top;');
+    apply('.cover-title-row td', 'background:#000080;color:#ffffff;font-weight:bold;border:1px solid #000080;padding:11px 14px;');
+    apply('.cover-title-row td.big', 'font-size:17px;text-align:center;');
+    apply('.cover-title-row td.small', 'font-size:14px;');
+    apply('table.cover-grid td.lbl', 'background:#f4f5fa;font-weight:bold;width:230px;text-align:left;');
+    apply('table.cover-grid td.sec', 'background:#e7e9f3;font-weight:bold;');
+    apply('table.cover-grid td.chk-indicator', 'text-align:center;font-weight:bold;');
+
+    apply('table.twocol', 'width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:14px;');
+    apply('table.twocol.info-row', 'page-break-inside:avoid;');
+    apply('table.twocol td.twocol-l', 'width:53%;vertical-align:top;padding:0 8px 0 0;');
+    apply('table.twocol td.twocol-r', 'width:47%;vertical-align:top;padding:0 0 0 8px;');
+
+    apply('table.site-header-bar', 'width:100%;border-collapse:collapse;background:#000080;margin:0 0 14px 0;page-break-inside:avoid;');
+    apply('table.site-header-bar td', 'color:#ffffff;padding:12px 18px;');
+    apply('table.site-header-bar td.bar-ts', 'text-align:right;white-space:nowrap;font-size:9.5px;color:#cfd4ef;');
+    apply('.site-header-bar .proj-title', 'font-size:16px;font-weight:600;');
+
+    apply('.info-box', 'border:1px solid #444444;padding:9px 12px;font-size:12.5px;line-height:1.55;page-break-inside:avoid;');
+
+    apply('.img-col img', 'width:88mm;max-width:88mm;height:auto;display:block;border:1px solid #999999;margin-bottom:4px;page-break-inside:avoid;');
+    apply('.proc-note', 'font-size:12px;color:#222222;margin:10px 0 4px 0;');
+
+    apply('table.quant-table', 'width:100%;border-collapse:collapse;font-size:12.5px;margin:2px 0 4px 0;');
+    apply('table.quant-table th', 'border-top:1.4px solid #111111;border-bottom:1px solid #111111;text-align:left;font-weight:bold;padding:4px 10px 4px 0;');
+    apply('table.quant-table td', 'padding:3px 10px 3px 0;text-align:left;');
+    apply('table.quant-table tr.last-row td', 'border-bottom:1.4px solid #111111;');
+    apply('.weight-note', 'font-size:11.5px;color:#333333;margin:2px 0 16px 0;');
+
+    apply('.comment-box', 'border:1px solid #444444;');
+    apply('.comment-box .cb-title', 'padding:8px 12px;font-size:12.5px;font-weight:600;border-bottom:1px solid #444444;');
+    apply('table.comment-table', 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;');
+    apply('table.comment-table td', 'border:1px solid #444444;padding:6px 10px;vertical-align:top;word-wrap:break-word;');
+    apply('table.comment-table td.c-label', 'width:120px;background:#fafafa;');
+    apply('table.comment-table td.c-value', 'width:150px;');
+
+    apply('.photo-mini', 'display:inline-block;border:1px solid #e3e6ee;border-radius:4px;padding:3px 6px;font-family:"Segoe UI",sans-serif;font-size:10.5px;margin:0 0 4px 0;');
+    apply('.photo-mini img', 'width:38px;height:30px;vertical-align:middle;margin-right:6px;');
+
+    apply('.specimen-title-row h2', 'font-size:17px;color:#0d1f5c;margin:0;font-weight:bold;font-family:"Times New Roman",Georgia,serif;');
+    apply('table.details-mini', 'font-size:12px;margin-top:6px;border-collapse:collapse;');
+    apply('table.details-mini td', 'border:1px solid #c7cddb;padding:3px 8px;');
+  }
+
+  // Word's HTML engine (all versions) cannot decode WebP, and cannot
+  // reliably decode inline SVG either — both come through from the EDX
+  // source report and, left as-is, show up as a broken/missing image in
+  // Word even before any resave. Re-draw them onto a canvas and swap the
+  // <img> src for a plain PNG data URL, which every Word version accepts.
+  function loadImageEl(src){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('image failed to load'));
+      img.src = src;
+    });
+  }
+  function convertImgToPngIfNeeded(imgEl){
+    const src = imgEl.getAttribute('src') || '';
+    if (!/^data:image\/(webp|svg\+xml)/i.test(src)) return Promise.resolve();
+    return loadImageEl(src).then(loaded => {
+      const w = loaded.naturalWidth || loaded.width || 400;
+      const h = loaded.naturalHeight || loaded.height || 300;
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(loaded, 0, 0, w, h);
+      imgEl.setAttribute('src', canvas.toDataURL('image/png'));
+    }).catch(()=>{ /* leave the original src if conversion fails */ });
+  }
+  function makeImagesWordSafe(root){
+    return Promise.all($all('img', root).map(convertImgToPngIfNeeded));
+  }
+
+  function exportDoc(){
+    if (!MODEL) return Promise.resolve();
+    const clean = buildCleanReportHTML();
+    return makeImagesWordSafe(clean).then(()=>{
+      inlineStylesForWord(clean);
+      const title = escapeHtml(MODEL.project.title);
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<meta name=ProgId content=Word.Document>
+<title>${title}</title>
+<!--[if gte mso 9]>
+<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
+<![endif]-->
+<style>
+${getExportCss()}
+@page { size: 21cm 29.7cm; margin: 2cm; }
+</style>
+</head>
+<body>
+${clean.innerHTML}
+</body>
+</html>`;
+      downloadBlob(new Blob(['\ufeff', html], {type:'application/msword'}), baseName(SOURCE_FILE_NAME) + '_report.doc');
+      showToast('Word document downloaded.');
+    }).catch(err=>{
+      console.error(err);
+      showToast('Word export failed: ' + err.message, true);
+    });
+  }
+
+  /* ============================================================
+     7. Export: PDF — via the browser's own native print engine.
+     (Previously used a CDN-loaded html2canvas/jsPDF pipeline, which
+     could silently produce a blank PDF if the screenshot step failed
+     — e.g. no internet access to fetch the library, or html2canvas
+     choking on the off-screen clone. Printing uses the exact same
+     A4 CSS already defined for the on-screen preview/export and has
+     no external dependency, so it can't fail that way.)
+  ============================================================ */
+  function exportPdf(){
+    if (!MODEL) return Promise.resolve();
+    const clean = buildCleanReportHTML();
+
+    const printRoot = document.createElement('div');
+    printRoot.id = 'printExportRoot';
+    printRoot.appendChild(clean);
+    document.body.appendChild(printRoot);
+
+    return new Promise((resolve)=>{
+      let done = false;
+      const cleanup = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('afterprint', cleanup);
+        printRoot.remove();
+        resolve();
+      };
+      window.addEventListener('afterprint', cleanup);
+      // Safety net: some browsers don't fire afterprint reliably when the
+      // dialog is cancelled, so clean up regardless after a while.
+      setTimeout(cleanup, 20000);
+
+      showToast('Opening the print dialog — choose "Save as PDF" as the printer.');
+      // Give the browser a tick to lay out the freshly-inserted content
+      // (images especially) before opening the print dialog.
+      setTimeout(()=>{ window.print(); }, 80);
+    });
+  }
+
+  function exportBoth(){ exportDoc(); exportPdf(); }
+
+  $('#exportHtmlBtn').addEventListener('click', exportHtml);
+  $('#exportDocBtn').addEventListener('click', exportDoc);
+  $('#exportPdfBtn').addEventListener('click', exportPdf);
+  $('#exportBothBtn').addEventListener('click', exportBoth);
+
+})();
+</script>
+</body>
+</html>
