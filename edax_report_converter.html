@@ -245,14 +245,15 @@
   .img-slot.excluded img{opacity:.28;}
   .img-slot.excluded .sel-overlay{background:rgba(255,255,255,.96);}
 
-  .proc-note{font-size:12px;color:#222;margin:10px 0 4px;}
-  table.quant-table{width:100%;border-collapse:collapse;font-size:12.5px;margin:2px 0 4px;}
-  table.quant-table th{border-top:1.4px solid #111;border-bottom:1px solid #111;text-align:left;font-weight:700;padding:4px 10px 4px 0;}
-  table.quant-table td{padding:3px 10px 3px 0;text-align:left;white-space:nowrap;}
+  .quant-section-full{width:100%;margin-top:10px;}
+  .proc-note{font-size:13px;color:#222;font-weight:600;margin:10px 0 4px;}
+  table.quant-table{width:100%;border-collapse:collapse;font-size:13px;margin:2px 0 4px;}
+  table.quant-table th{border-top:1.4px solid #111;border-bottom:1px solid #111;text-align:left;font-weight:700;padding:5px 10px 5px 0;}
+  table.quant-table td{padding:4px 10px 4px 0;text-align:left;white-space:nowrap;}
   table.quant-table tr.spacer td{padding:4px 0;border:none;}
   table.quant-table tr.stat-row:first-of-type td{border-top:1px solid #111;}
   table.quant-table tr.last-row td{border-bottom:1.4px solid #111;}
-  .weight-note{font-size:11.5px;color:#333;margin:2px 0 16px;}
+  .weight-note{font-size:12px;color:#333;margin:3px 0 16px;}
   .no-quant-msg{font-size:11.5px;color:var(--ink-soft);font-style:italic;font-family:"Segoe UI",sans-serif;margin:6px 0 14px;}
 
   .site-select-row{display:flex;align-items:center;gap:8px;margin:2px 0 8px;font-family:"Segoe UI",sans-serif;}
@@ -260,13 +261,18 @@
   .site-select-row button:hover{background:#eef1fb;}
   .site-select-row .lbl{font-size:10.5px;color:var(--ink-soft);}
 
-  .comment-box{border:1px solid #444;}
+  .comment-box{border:1px solid #444;transition:opacity .2s ease;}
+  .comment-box.excluded{border-style:dashed;opacity:.55;}
+  .comment-box.excluded table.comment-table{display:none;}
+  .comment-box.excluded .cb-title{border-bottom:none;}
   .comment-box .cb-title{padding:8px 12px;font-size:12.5px;font-weight:600;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center;}
+  .cb-toggle-label{display:inline-flex;align-items:center;gap:7px;cursor:pointer;}
   .comment-box .cb-title .copy-btn{
     font-family:"Segoe UI",sans-serif;font-size:10px;border:1px solid var(--line);background:#fbfbfd;
     color:var(--navy-2);border-radius:4px;padding:2px 7px;font-weight:500;
   }
   .comment-box .cb-title .copy-btn:hover{background:#eef1fb;}
+  .comment-box.excluded .cb-title .copy-btn{display:none;}
   table.comment-table{width:100%;border-collapse:collapse;font-size:12.5px;}
   table.comment-table td{border:1px solid #444;padding:6px 10px;vertical-align:top;}
   table.comment-table td.c-label{width:150px;background:#fafafa;}
@@ -377,9 +383,21 @@
       break-inside: avoid !important;
       page-break-inside: avoid !important;
     }
+    .quant-section-full{
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      margin-top: 8px !important;
+    }
     table.quant-table{
       break-inside: avoid !important;
       page-break-inside: avoid !important;
+      font-size: 13px !important;
+    }
+    table.quant-table th{
+      padding: 5px 10px 5px 0 !important;
+    }
+    table.quant-table td{
+      padding: 4px 10px 4px 0 !important;
     }
     table.quant-table tr{
       break-inside: avoid !important;
@@ -810,7 +828,7 @@
   }
 
   function renderQuantSection(site){
-    const wrap = el('div');
+    const wrap = el('div', { class:'quant-section-full' });
     if (!site.summary || !site.summary.rows.length) return wrap; // silently omit, matches reference (no data = no section)
 
     wrap.appendChild(el('p', { class:'proc-note', text:'Processing option : All elements analysed (Normalised)' }));
@@ -915,7 +933,6 @@
       col.appendChild(specWrap);
     }
 
-    col.appendChild(renderQuantSection(site));
     return col;
   }
 
@@ -975,8 +992,16 @@
 
   function renderCommentBox(specimenIdx, siteIdx, site){
     const box = el('div', { class:'comment-box' });
+    const cbCheck = el('input', { type:'checkbox', class:'chk-box comment-toggle-cb' });
+    cbCheck.checked = true;
+    cbCheck.addEventListener('change', ()=>{
+      box.classList.toggle('excluded', !cbCheck.checked);
+    });
     const title = el('div', { class:'cb-title' }, [
-      el('span', { text:'Comment:' }),
+      el('label', { class:'cb-toggle-label' }, [
+        cbCheck,
+        el('span', { text:'Comment:' })
+      ]),
       el('button', { type:'button', class:'copy-btn', text:'Copy from previous site' })
     ]);
     box.appendChild(title);
@@ -1081,6 +1106,9 @@
     const contentRow = twoColTable(renderImagesColumn(site), renderCommentBox(specimenIdx, siteIdx, site), 'twocol content-row');
     sheet.appendChild(contentRow);
 
+    const quantSection = renderQuantSection(site);
+    sheet.appendChild(quantSection);
+
     return sheet;
   }
 
@@ -1110,7 +1138,20 @@
     ]));
 
     table.appendChild(coverRow([...coverPair('Report Date', todayStr()), ...coverPair('Report No.', '')]));
-    table.appendChild(coverRow([...coverPair('Production', ''), ...coverPair('0 KM', '')]));
+
+    const prodCb = el('input', { type:'checkbox', class:'chk-box' });
+    const prodInd = el('td', { class:'val chk-indicator', text:'\u2717' });
+    const zeroKmCb = el('input', { type:'checkbox', class:'chk-box' });
+    const zeroKmInd = el('td', { class:'val chk-indicator', text:'\u2717' });
+    prodCb.addEventListener('change', ()=>{ prodInd.textContent = prodCb.checked ? '\u2713' : '\u2717'; });
+    zeroKmCb.addEventListener('change', ()=>{ zeroKmInd.textContent = zeroKmCb.checked ? '\u2713' : '\u2717'; });
+    table.appendChild(coverRow([
+      el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ prodCb, el('span',{text:'Production'}) ]) ]),
+      prodInd,
+      el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ zeroKmCb, el('span',{text:'0 KM'}) ]) ]),
+      zeroKmInd
+    ]));
+
     const investCb = el('input', { type:'checkbox', class:'chk-box' });
     const investInd = el('td', { class:'val chk-indicator', text:'\u2717' });
     const fieldCb = el('input', { type:'checkbox', class:'chk-box' });
@@ -1381,7 +1422,14 @@
   // buildCleanReportHTML() removes the column for real at export time).
   $('#includeCommentsToggle').addEventListener('change', function(){
     const rr = $('#reportRoot');
-    if (rr) rr.classList.toggle('hide-comments', !this.checked);
+    if (rr) {
+      rr.classList.toggle('hide-comments', !this.checked);
+      $all('.comment-toggle-cb', rr).forEach(cb => {
+        cb.checked = this.checked;
+        const b = cb.closest('.comment-box');
+        if (b) b.classList.toggle('excluded', !this.checked);
+      });
+    }
   });
 
   // Smooth scroll to outline sections taking sticky headers into account
@@ -1446,15 +1494,19 @@
       td.textContent = val;
     });
 
-    const includeComments = $('#includeCommentsToggle') ? $('#includeCommentsToggle').checked : true;
-    if (!includeComments){
-      $all('table.content-row', clone).forEach(row => {
+    const globalHide = $('#includeCommentsToggle') ? !$('#includeCommentsToggle').checked : false;
+    $all('table.content-row', clone).forEach(row => {
+      const box = row.querySelector('.comment-box');
+      if (globalHide || (box && box.classList.contains('excluded'))){
         const rightTd = row.querySelector('td.twocol-r');
         if (rightTd) rightTd.remove();
         const leftTd = row.querySelector('td.twocol-l');
-        if (leftTd) leftTd.style.width = '100%';
-      });
-    }
+        if (leftTd) {
+          leftTd.style.width = '100%';
+          leftTd.style.paddingRight = '0';
+        }
+      }
+    });
 
     $all('input[type=checkbox], select', clone).forEach(n => n.remove());
     $all('[contenteditable]', clone).forEach(n => n.removeAttribute('contenteditable'));
@@ -1558,14 +1610,15 @@
       .site-header-bar .ts { font-size: 9.5px; color: #cfd4ef; white-space: nowrap; }
       .info-box { border: 1px solid #444; padding: 8px 12px; font-size: 12.5px; line-height: 1.5; min-height: 64px; }
       .img-col img { width: 100%; display: block; border: 1px solid #999; margin-bottom: 4px; }
-      .proc-note { font-size: 12px; color: #222; margin: 8px 0 4px; }
-      table.quant-table { width: 100%; font-size: 12.5px; margin: 2px 0 4px; }
-      table.quant-table th { border-top: 1.4px solid #111; border-bottom: 1px solid #111; text-align: left; font-weight: 700; padding: 4px 8px 4px 0; }
-      table.quant-table td { padding: 3px 8px 3px 0; text-align: left; white-space: nowrap; }
-      table.quant-table tr.spacer td { padding: 3px 0; border: none; }
+      .quant-section-full { width: 100%; margin-top: 8px; }
+      .proc-note { font-size: 13px; font-weight: 700; color: #222; margin: 8px 0 4px; }
+      table.quant-table { width: 100%; font-size: 13px; margin: 2px 0 4px; }
+      table.quant-table th { border-top: 1.4px solid #111; border-bottom: 1px solid #111; text-align: left; font-weight: 700; padding: 5px 10px 5px 0; }
+      table.quant-table td { padding: 4px 10px 4px 0; text-align: left; white-space: nowrap; }
+      table.quant-table tr.spacer td { padding: 4px 0; border: none; }
       table.quant-table tr.stat-row:first-of-type td { border-top: 1px solid #111; }
       table.quant-table tr.last-row td { border-bottom: 1.4px solid #111; }
-      .weight-note { font-size: 11.5px; color: #333; margin: 2px 0 14px; }
+      .weight-note { font-size: 12px; color: #333; margin: 3px 0 14px; }
       .no-quant-msg { font-size: 11.5px; color: #5b6478; font-style: italic; font-family: "Segoe UI", sans-serif; margin: 6px 0 14px; }
       .comment-box { border: 1px solid #444; }
       .comment-box .cb-title { padding: 7px 12px; font-size: 12.5px; font-weight: 600; border-bottom: 1px solid #444; }
@@ -1651,13 +1704,14 @@ ${bodyEl.innerHTML}
     apply('.info-box', 'border:1px solid #444444;padding:7px 10px;font-size:12px;line-height:1.45;page-break-inside:avoid;');
 
     apply('.img-col img', 'display:block;border:1px solid #999999;margin-bottom:4px;');
-    apply('.proc-note', 'font-size:11.5px;color:#222222;margin:8px 0 3px 0;');
+    apply('.quant-section-full', 'width:100%;margin-top:6px;');
+    apply('.proc-note', 'font-size:12px;font-weight:bold;color:#222222;margin:6px 0 3px 0;');
 
-    apply('table.quant-table', 'width:100%;border-collapse:collapse;font-size:12px;margin:2px 0 4px 0;mso-table-layout-alt:fixed;');
-    apply('table.quant-table th', 'border-top:1.4px solid #111111;border-bottom:1px solid #111111;text-align:left;font-weight:bold;padding:3px 6px 3px 0;');
-    apply('table.quant-table td', 'padding:2.5px 6px 2.5px 0;text-align:left;');
+    apply('table.quant-table', 'width:100%;border-collapse:collapse;font-size:12.5px;margin:2px 0 4px 0;mso-table-layout-alt:fixed;');
+    apply('table.quant-table th', 'border-top:1.4px solid #111111;border-bottom:1px solid #111111;text-align:left;font-weight:bold;padding:3.5px 8px 3.5px 0;');
+    apply('table.quant-table td', 'padding:3px 8px 3px 0;text-align:left;');
     apply('table.quant-table tr.last-row td', 'border-bottom:1.4px solid #111111;');
-    apply('.weight-note', 'font-size:11px;color:#333333;margin:2px 0 12px 0;');
+    apply('.weight-note', 'font-size:11px;color:#333333;margin:2px 0 10px 0;');
 
     apply('.comment-box', 'border:1px solid #444444;page-break-inside:avoid;');
     apply('.comment-box .cb-title', 'padding:6px 10px;font-size:12px;font-weight:600;border-bottom:1px solid #444444;');
@@ -1673,13 +1727,17 @@ ${bodyEl.innerHTML}
     apply('table.details-mini', 'font-size:11.5px;margin-top:5px;border-collapse:collapse;');
     apply('table.details-mini td', 'border:1px solid #c7cddb;padding:2.5px 7px;');
 
-    // Restructure site sheets into a single unified 3-row table for Word
-    // Row 1: Header bar, Row 2: Info row, Row 3: Two-column content (images+quant, comments)
-    // This locks header and content onto the same page in Word, eliminating orphaned headers.
+    // Restructure site sheets into a single unified 4-row table for Word
+    // Row 1: Header bar
+    // Row 2: Info row
+    // Row 3: Two-column content (images in leftTd, comments in rightTd)
+    // Row 4: Spectrum quant table spanning full width
+    // This locks header, content, and spectrum table onto the same page in Word, eliminating orphaned headers and unexpected page breaks.
     $all('.sheet', root).forEach(sheet => {
       const bar = sheet.querySelector('table.site-header-bar');
       const info = sheet.querySelector('table.info-row');
       const content = sheet.querySelector('table.content-row');
+      const quant = sheet.querySelector('.quant-section-full');
       if (bar && content){
         const master = document.createElement('table');
         master.className = 'site-sheet-table';
@@ -1731,7 +1789,21 @@ ${bodyEl.innerHTML}
         }
         master.appendChild(tr3);
 
+        // Row 4: Quant Section (if present)
+        if (quant && quant.children.length > 0){
+          const tr4 = document.createElement('tr');
+          const td4 = document.createElement('td');
+          td4.setAttribute('colspan', '2');
+          td4.setAttribute('style', 'padding:6px 0 0 0;');
+          td4.appendChild(quant);
+          tr4.appendChild(td4);
+          master.appendChild(tr4);
+        }
+
         content.parentNode.replaceChild(master, content);
+        if (quant && quant.parentNode === sheet){
+          quant.remove();
+        }
       }
     });
 
@@ -1777,8 +1849,8 @@ ${bodyEl.innerHTML}
         targetH = 30;
       } else {
         // Left column width in Word (53% of 180mm = ~95mm)
-        // Set explicit 280px width with proportional height
-        targetW = 280;
+        // Set explicit 330px width with proportional height
+        targetW = 330;
         targetH = Math.round((targetW * natH) / natW);
       }
       imgEl.setAttribute('width', String(targetW));
