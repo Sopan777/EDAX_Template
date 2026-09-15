@@ -499,7 +499,7 @@
       </div>
       <div class="hint-box">
         Click any title, note or table cell to edit it directly. Fields on the cover sheet
-        marked "Sample / Type / ID" and the Project/Owner box are shared across every page of
+        marked "Sample / Type / ID" and the Project box are shared across every page of
         the same specimen &mdash; edit once and every page updates.
       </div>
       <button class="btn ghost" id="startOverBtn" type="button" style="align-self:flex-start;">&larr; Start Over</button>
@@ -1101,10 +1101,6 @@
     l1.appendChild(document.createTextNode('Project: '));
     l1.appendChild(echoField('projectTitle', MODEL.project.title, 'span'));
     leftBox.appendChild(l1);
-    const l2 = el('div', { class:'ln' });
-    l2.appendChild(document.createTextNode('Owner: '));
-    l2.appendChild(echoField('projectOwner', MODEL.project.owner || '', 'span'));
-    leftBox.appendChild(l2);
     const l3 = el('div', { class:'ln' });
     l3.appendChild(document.createTextNode('Site: '));
     l3.appendChild(el('span', { contenteditable:'true', text: site.title }));
