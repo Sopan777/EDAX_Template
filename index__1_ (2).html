@@ -21,6 +21,7 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
   body{
     background:var(--canvas);
     color:var(--ink);
@@ -89,7 +90,22 @@
   .workspace{display:grid;grid-template-columns:250px 1fr;gap:20px;align-items:start;}
   @media (max-width:960px){.workspace{grid-template-columns:1fr;}}
 
-  .side{position:sticky;top:70px;display:flex;flex-direction:column;gap:14px;}
+  .side{
+    position:sticky;
+    top:70px;
+    max-height:calc(100vh - 85px);
+    overflow-y:auto;
+    overflow-x:hidden;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    padding-right:4px;
+  }
+  .side::-webkit-scrollbar{width:5px;}
+  .side::-webkit-scrollbar-track{background:transparent;}
+  .side::-webkit-scrollbar-thumb{background:#cbd3ea;border-radius:4px;}
+  .side::-webkit-scrollbar-thumb:hover{background:#9faecf;}
+
   .panel{background:var(--paper);border:1px solid var(--line-soft);border-radius:8px;padding:14px 14px 16px;}
   .panel h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft);font-weight:700;}
   .panel .row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;color:var(--ink);}
@@ -119,8 +135,42 @@
   /* checklist checkmark/cross indicator cells on the cover sheet */
   .cover-grid td.chk-indicator{text-align:center;font-weight:700;}
 
+  /* Person dropdown field on the cover page */
+  .person-field-wrap{display:flex;flex-direction:column;gap:4px;}
+  .person-select-inline{
+    font-family:"Segoe UI",system-ui,sans-serif;
+    font-size:11.5px;
+    padding:3px 6px;
+    border:1px solid #b8c1dd;
+    border-radius:4px;
+    background:#f4f6fc;
+    color:var(--navy-2);
+    cursor:pointer;
+    font-weight:600;
+  }
+  .person-select-inline:hover{background:#e8ecf8;border-color:#8c9cc9;}
+  .person-select-inline:focus{outline:none;border-color:var(--brass);box-shadow:0 0 0 2px rgba(169,120,47,.2);}
+  .person-name-text{
+    min-height:22px;
+    padding:2px 4px;
+    font-size:13px;
+    font-family:"Times New Roman",Georgia,serif;
+    color:#111;
+    border-radius:3px;
+  }
+  .person-name-text:empty:before{
+    content:attr(placeholder);
+    color:#8a92a8;
+    font-style:italic;
+    font-family:"Segoe UI",system-ui,sans-serif;
+    font-size:11.5px;
+  }
+  @media print{
+    .person-select-inline{display:none !important;}
+  }
+
   /* ---------- Report canvas ---------- */
-  .canvas-wrap{background:transparent;}
+  .canvas-wrap{background:transparent;min-width:0;}
   .canvas-toolbar{
     display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
     border:1px solid var(--line-soft);background:#f8f9fc;gap:10px;flex-wrap:wrap;
@@ -147,6 +197,7 @@
     box-shadow:0 1px 4px rgba(20,25,50,.10), 0 8px 22px rgba(20,25,50,.08);
     border-radius:3px;
     padding:18mm 15mm;
+    scroll-margin-top:130px;
   }
   .sheet + .sheet{margin-top:26px;}
 
@@ -1099,14 +1150,78 @@
      ['Injector no.',''], ['Mfd & Sr. no.',''], ['Location of particle',''], ['Sample Submission date','']
     ].forEach(([l,v]) => table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:l}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:v}) ])));
 
+  function createPersonCell(kind, defaultOptions, sidebarSelectId, inlineSelectId){
+    const wrap = el('div', { class:'person-field-wrap' });
+    const select = el('select', { class:'person-select-inline', id:inlineSelectId });
+    select.appendChild(el('option', { value:'', text:`— Select ${kind} —` }));
+    defaultOptions.forEach(opt => {
+      select.appendChild(el('option', { value:opt, text:opt }));
+    });
+    select.appendChild(el('option', { value:'__custom__', text:'Type manually...' }));
+
+    const nameText = el('div', {
+      class: 'person-name-text',
+      contenteditable: 'true',
+      placeholder: 'Click to type or select above...'
+    });
+
+    const sidebarSel = $(sidebarSelectId);
+    if (sidebarSel && sidebarSel.value){
+      select.value = sidebarSel.value;
+      nameText.textContent = sidebarSel.value;
+    }
+
+    select.addEventListener('change', ()=>{
+      if (select.value === '__custom__'){
+        nameText.textContent = '';
+        nameText.focus();
+        if (sidebarSel) sidebarSel.value = '';
+      } else {
+        nameText.textContent = select.value;
+        if (sidebarSel) sidebarSel.value = select.value;
+      }
+    });
+
+    nameText.addEventListener('input', ()=>{
+      const val = nameText.textContent.trim();
+      let matched = false;
+      for (let i = 0; i < select.options.length; i++){
+        if (select.options[i].value === val){
+          select.selectedIndex = i;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && val){
+        select.value = '__custom__';
+      } else if (!val){
+        select.selectedIndex = 0;
+      }
+      if (sidebarSel) {
+        sidebarSel.value = matched ? val : '';
+      }
+    });
+
+    wrap.appendChild(select);
+    wrap.appendChild(nameText);
+    return wrap;
+  }
+
+    const prepCell = el('td', { class:'val person-cell', id:'preparedByCell' }, [
+      createPersonCell('Prepared by', ['N R Khairnar'], '#preparedBySelect', 'preparedByInlineSelect')
+    ]);
+    const relCell = el('td', { class:'val person-cell', id:'releasedByCell' }, [
+      createPersonCell('Released by', ['J R Nagrale PS/QMM8-NaP'], '#releasedBySelect', 'releasedByInlineSelect')
+    ]);
+
     table.appendChild(coverRow([
       el('td', { class:'lbl', contenteditable:'true', text:'Prepared by' }),
-      el('td', { class:'val', id:'preparedByCell', contenteditable:'true', text:'' }),
+      prepCell,
       el('td', { class:'lbl', contenteditable:'true', text:'Released by' }),
-      el('td', { class:'val', id:'releasedByCell', contenteditable:'true', text:'' })
+      relCell
     ]));
 
-    const sheet = el('div', { class:'sheet' }, [ table ]);
+    const sheet = el('div', { class:'sheet', id:'coverSheet' }, [ table ]);
     return sheet;
   }
 
@@ -1126,6 +1241,7 @@
   function renderOutline(model){
     const list = $('#outlineList');
     list.innerHTML = '';
+    list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#coverSheet', text: 'Cover Page' }) ]));
     model.project.specimens.forEach((sp, sIdx) => {
       list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#specimen_'+sIdx+'_site_0', text: sp.title }) ]));
       sp.sites.forEach((site, siteIdx) => {
@@ -1268,15 +1384,38 @@
     if (rr) rr.classList.toggle('hide-comments', !this.checked);
   });
 
+  // Smooth scroll to outline sections taking sticky headers into account
+  $('#outlineList').addEventListener('click', (e)=>{
+    const a = e.target.closest('a');
+    if (a && a.getAttribute('href') && a.getAttribute('href').startsWith('#')){
+      e.preventDefault();
+      const targetId = a.getAttribute('href').slice(1);
+      const targetEl = document.getElementById(targetId);
+      if (targetEl){
+        const headerOffset = 130;
+        const elementPosition = targetEl.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }
+  });
+
   // Report Options: Prepared by / Released by presets fill the cover-sheet
-  // fields, which stay contenteditable so they can still be edited by hand.
+  // fields, keeping sidebar and on-page dropdowns completely synchronized.
   $('#preparedBySelect').addEventListener('change', function(){
-    const cell = $('#preparedByCell');
-    if (cell) cell.textContent = this.value;
+    const inlineSel = $('#preparedByInlineSelect');
+    const txt = $('#preparedByCell .person-name-text');
+    if (inlineSel) inlineSel.value = this.value;
+    if (txt) txt.textContent = this.value;
   });
   $('#releasedBySelect').addEventListener('change', function(){
-    const cell = $('#releasedByCell');
-    if (cell) cell.textContent = this.value;
+    const inlineSel = $('#releasedByInlineSelect');
+    const txt = $('#releasedByCell .person-name-text');
+    if (inlineSel) inlineSel.value = this.value;
+    if (txt) txt.textContent = this.value;
   });
 
   const dropCard = $('#dropCard');
@@ -1299,6 +1438,14 @@
     $all('.add-photo-btn, .hidden-file-input', clone).forEach(n => n.remove());
     $all('.pm-remove', clone).forEach(n => n.remove());
 
+    // Replace person dropdown wrapper with clean plain text in table cell
+    $all('.person-field-wrap', clone).forEach(wrap => {
+      const nameText = wrap.querySelector('.person-name-text');
+      const val = nameText ? nameText.textContent.trim() : '';
+      const td = wrap.parentNode;
+      td.textContent = val;
+    });
+
     const includeComments = $('#includeCommentsToggle') ? $('#includeCommentsToggle').checked : true;
     if (!includeComments){
       $all('table.content-row', clone).forEach(row => {
@@ -1309,7 +1456,7 @@
       });
     }
 
-    $all('input[type=checkbox]', clone).forEach(n => n.remove());
+    $all('input[type=checkbox], select', clone).forEach(n => n.remove());
     $all('[contenteditable]', clone).forEach(n => n.removeAttribute('contenteditable'));
     return clone;
   }
