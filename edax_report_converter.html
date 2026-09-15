@@ -600,6 +600,40 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=> URL.revokeObjectURL(url), 4000);
   }
+
+  async function saveFileWithPicker(blob, filename, mimeType, description){
+    if ('showSaveFilePicker' in window){
+      try {
+        const dotIdx = filename.lastIndexOf('.');
+        const ext = dotIdx !== -1 ? filename.slice(dotIdx) : '';
+        const opts = {
+          suggestedName: filename
+        };
+        if (ext && mimeType){
+          opts.types = [{
+            description: description || (ext.toUpperCase().slice(1) + ' Document'),
+            accept: { [mimeType]: [ext] }
+          }];
+        }
+        if (SOURCE_FILE_HANDLE){
+          opts.startIn = SOURCE_FILE_HANDLE;
+        }
+        const handle = await window.showSaveFilePicker(opts);
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return true;
+      } catch(err) {
+        if (err && err.name === 'AbortError') {
+          // User deliberately cancelled the file picker dialog
+          return false;
+        }
+        console.warn('showSaveFilePicker error, falling back to downloadBlob:', err);
+      }
+    }
+    downloadBlob(blob, filename);
+    return true;
+  }
   function baseName(name){
     return (name||'report').replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g,'_').slice(0,80) || 'report';
   }
@@ -782,6 +816,7 @@
 
   let MODEL = null;
   let SOURCE_FILE_NAME = 'report';
+  let SOURCE_FILE_HANDLE = null;
 
   function el(tag, attrs, children){
     const e = document.createElement(tag);
@@ -1349,6 +1384,7 @@
 
   function resetToUpload(){
     MODEL = null;
+    SOURCE_FILE_HANDLE = null;
     $('#workspaceScreen').style.display = 'none';
     $('#previewScreen').style.display = 'none';
     $('#uploadScreen').style.display = 'flex';
@@ -1416,7 +1452,28 @@
     reader.readAsText(file);
   }
 
-  $('#chooseFileBtn').addEventListener('click', ()=> $('#fileInput').click());
+  $('#chooseFileBtn').addEventListener('click', async () => {
+    if ('showOpenFilePicker' in window){
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{
+            description: 'EDAX HTML Report (*.html, *.htm)',
+            accept: { 'text/html': ['.html', '.htm'] }
+          }],
+          multiple: false
+        });
+        if (handle){
+          SOURCE_FILE_HANDLE = handle;
+          const file = await handle.getFile();
+          handleFile(file);
+          return;
+        }
+      } catch(err) {
+        if (err && err.name === 'AbortError') return;
+      }
+    }
+    $('#fileInput').click();
+  });
   $('#fileInput').addEventListener('change', (e)=> handleFile(e.target.files[0]));
   $('#startOverBtn').addEventListener('click', ()=>{
     resetToUpload();
@@ -1480,7 +1537,21 @@
   const dropCard = $('#dropCard');
   ['dragenter','dragover'].forEach(evt => dropCard.addEventListener(evt, (e)=>{ e.preventDefault(); dropCard.classList.add('drag'); }));
   ['dragleave','drop'].forEach(evt => dropCard.addEventListener(evt, (e)=>{ e.preventDefault(); dropCard.classList.remove('drag'); }));
-  dropCard.addEventListener('drop', (e)=>{ const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); });
+  dropCard.addEventListener('drop', async (e)=>{
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (e.dataTransfer.items && e.dataTransfer.items[0]){
+      const item = e.dataTransfer.items[0];
+      if (typeof item.getAsFileSystemHandle === 'function'){
+        try {
+          const handle = await item.getAsFileSystemHandle();
+          if (handle && handle.kind === 'file'){
+            SOURCE_FILE_HANDLE = handle;
+          }
+        } catch(err){ /* ignore */ }
+      }
+    }
+    if (f) handleFile(f);
+  });
 
   /* ============================================================
      4. Building a clean, exportable copy of the report
@@ -1664,12 +1735,14 @@ ${bodyEl.innerHTML}
   /* ============================================================
      5. Export: HTML
   ============================================================ */
-  function exportHtml(){
+  async function exportHtml(){
     if (!MODEL) return;
     const clean = buildCleanReportHTML();
     const html = fullHtmlDocument(clean, MODEL.project.title);
-    downloadBlob(new Blob([html], {type:'text/html'}), baseName(SOURCE_FILE_NAME) + '_report.html');
-    showToast('HTML report downloaded.');
+    const filename = baseName(SOURCE_FILE_NAME) + '_report.html';
+    const blob = new Blob([html], {type:'text/html'});
+    const saved = await saveFileWithPicker(blob, filename, 'text/html', 'HTML Document (*.html)');
+    if (saved) showToast('HTML report saved.');
   }
 
   /* ============================================================
@@ -1883,10 +1956,11 @@ ${bodyEl.innerHTML}
     return Promise.all($all('img', root).map(convertImgToPngIfNeeded));
   }
 
-  function exportDoc(){
-    if (!MODEL) return Promise.resolve();
+  async function exportDoc(){
+    if (!MODEL) return;
     const clean = buildCleanReportHTML();
-    return makeImagesWordSafe(clean).then(()=>{
+    try {
+      await makeImagesWordSafe(clean);
       inlineStylesForWord(clean);
       const title = escapeHtml(MODEL.project.title);
 
@@ -1955,12 +2029,14 @@ ${clean.innerHTML}
 </div>
 </body>
 </html>`;
-      downloadBlob(new Blob(['\ufeff', html], {type:'application/msword'}), baseName(SOURCE_FILE_NAME) + '_report.doc');
-      showToast('Word document downloaded.');
-    }).catch(err=>{
+      const filename = baseName(SOURCE_FILE_NAME) + '_report.doc';
+      const blob = new Blob(['\ufeff', html], {type:'application/msword'});
+      const saved = await saveFileWithPicker(blob, filename, 'application/msword', 'Word Document (*.doc)');
+      if (saved) showToast('Word document saved.');
+    } catch(err){
       console.error(err);
       showToast('Word export failed: ' + err.message, true);
-    });
+    }
   }
 
   /* ============================================================
@@ -2002,7 +2078,7 @@ ${clean.innerHTML}
     });
   }
 
-  function exportBoth(){ exportDoc(); exportPdf(); }
+  async function exportBoth(){ await exportDoc(); await exportPdf(); }
 
   $('#exportHtmlBtn').addEventListener('click', exportHtml);
   $('#exportDocBtn').addEventListener('click', exportDoc);
