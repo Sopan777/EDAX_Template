@@ -1204,8 +1204,8 @@
       el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ fieldCb, el('span',{text:'Field'}) ]) ]),
       fieldInd
     ]));
-    table.appendChild(coverRow([...coverPair('Issued By', ': PS/QMM8-NaP'), ...coverPair('', '')]));
-    table.appendChild(coverRow([...coverPair('Distribution', ''), ...coverPair('', '')]));
+    table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:'Issued By'}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:': PS/QMM8-NaP'}) ]));
+    table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:'Distribution'}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:''}) ]));
     table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:'Subject'}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:': Material grade and probable source identification of particles.'}) ]));
     table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:'1) Task'}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:': Material analysis and dimensional measurement of particles.'}) ]));
 
