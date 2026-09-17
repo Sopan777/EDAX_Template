@@ -486,14 +486,16 @@
           <label for="preparedBySelect">Prepared by</label>
           <select id="preparedBySelect">
             <option value="">&mdash; Select &mdash;</option>
-            <option value="N R Khairnar">N R Khairnar</option>
+            <option value="N R Khairnar" selected>N R Khairnar</option>
+            <option value="Amit Darade">Amit Darade</option>
           </select>
         </div>
         <div class="opt-field">
           <label for="releasedBySelect">Released by</label>
           <select id="releasedBySelect">
             <option value="">&mdash; Select &mdash;</option>
-            <option value="J R Nagrale PS/QMM8-NaP">J R Nagrale PS/QMM8-NaP</option>
+            <option value="J R Nagrale" selected>J R Nagrale</option>
+            <option value="Amit Darade">Amit Darade</option>
           </select>
         </div>
       </div>
@@ -635,7 +637,7 @@
     return true;
   }
   function baseName(name){
-    return (name||'report').replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g,'_').slice(0,80) || 'report';
+    return (name || 'report').replace(/\.[^.]+$/, '').trim() || 'report';
   }
   function fileToDataUrl(file){
     return new Promise((resolve, reject)=>{
@@ -1046,12 +1048,6 @@
     ]);
     box.appendChild(title);
 
-    // Length/Width prefill, taken from the site's first Electron Image's
-    // "Image Height" / "Image Width" detail rows (µm figure only).
-    const firstImg = site && site.electronImageGroups && site.electronImageGroups[0];
-    const lengthPrefill = firstImg ? extractMicronValue(firstImg.detailsRows, 'Image Height') : '';
-    const widthPrefill = firstImg ? extractMicronValue(firstImg.detailsRows, 'Image Width') : '';
-
     const table = el('table', { class:'comment-table' });
     PARTICLE_FIELDS.forEach(([label, special]) => {
       const labelCell = el('td', { class:'c-label', contenteditable:'true', text: label });
@@ -1060,8 +1056,9 @@
         valueCell = el('td', { class:'c-value' }, [ renderPhotoField() ]);
       } else {
         let prefill = '';
-        if (label === 'Length in \u00b5m') prefill = lengthPrefill;
-        else if (label === 'Width in \u00b5m') prefill = widthPrefill;
+        if (label === 'Length in \u00b5m' || label === 'Width in \u00b5m'){
+          prefill = ' \u00b5m';
+        }
         valueCell = el('td', { class:'c-value', contenteditable:'true', text: prefill });
       }
       table.appendChild(el('tr', null, [ labelCell, valueCell ]));
@@ -1227,12 +1224,14 @@
      ['Injector no.',''], ['Mfd & Sr. no.',''], ['Location of particle',''], ['Sample Submission date','']
     ].forEach(([l,v]) => table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:l}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:v}) ])));
 
-  function createPersonCell(kind, defaultOptions, sidebarSelectId, inlineSelectId){
+  function createPersonCell(kind, defaultOptions, sidebarSelectId, inlineSelectId, defaultVal){
     const wrap = el('div', { class:'person-field-wrap' });
     const select = el('select', { class:'person-select-inline', id:inlineSelectId });
     select.appendChild(el('option', { value:'', text:`— Select ${kind} —` }));
     defaultOptions.forEach(opt => {
-      select.appendChild(el('option', { value:opt, text:opt }));
+      const optEl = el('option', { value:opt, text:opt });
+      if (defaultVal && opt === defaultVal) optEl.selected = true;
+      select.appendChild(optEl);
     });
     select.appendChild(el('option', { value:'__custom__', text:'Type manually...' }));
 
@@ -1243,9 +1242,11 @@
     });
 
     const sidebarSel = $(sidebarSelectId);
-    if (sidebarSel && sidebarSel.value){
-      select.value = sidebarSel.value;
-      nameText.textContent = sidebarSel.value;
+    const chosenVal = (sidebarSel && sidebarSel.value) ? sidebarSel.value : (defaultVal || '');
+    if (chosenVal){
+      select.value = chosenVal;
+      nameText.textContent = chosenVal;
+      if (sidebarSel) sidebarSel.value = chosenVal;
     }
 
     select.addEventListener('change', ()=>{
@@ -1285,10 +1286,10 @@
   }
 
     const prepCell = el('td', { class:'val person-cell', id:'preparedByCell' }, [
-      createPersonCell('Prepared by', ['N R Khairnar'], '#preparedBySelect', 'preparedByInlineSelect')
+      createPersonCell('Prepared by', ['N R Khairnar', 'Amit Darade'], '#preparedBySelect', 'preparedByInlineSelect', 'N R Khairnar')
     ]);
     const relCell = el('td', { class:'val person-cell', id:'releasedByCell' }, [
-      createPersonCell('Released by', ['J R Nagrale PS/QMM8-NaP'], '#releasedBySelect', 'releasedByInlineSelect')
+      createPersonCell('Released by', ['J R Nagrale', 'Amit Darade'], '#releasedBySelect', 'releasedByInlineSelect', 'J R Nagrale')
     ]);
 
     table.appendChild(coverRow([
@@ -1388,6 +1389,8 @@
     $('#fileInput').value = '';
     $('#fileNamePill').innerHTML = '';
     $('#uploadError').style.display = 'none';
+    if ($('#preparedBySelect')) $('#preparedBySelect').value = 'N R Khairnar';
+    if ($('#releasedBySelect')) $('#releasedBySelect').value = 'J R Nagrale';
   }
 
   // Builds a read-only preview showing exactly what export will produce
@@ -1735,7 +1738,7 @@ ${bodyEl.innerHTML}
     if (!MODEL) return;
     const clean = buildCleanReportHTML();
     const html = fullHtmlDocument(clean, MODEL.project.title);
-    const filename = baseName(SOURCE_FILE_NAME) + '_report.html';
+    const filename = baseName(SOURCE_FILE_NAME) + '.html';
     const blob = new Blob([html], {type:'text/html'});
     const saved = await saveFileWithPicker(blob, filename, 'text/html', 'HTML Document (*.html)');
     if (saved) showToast('HTML report saved.');
@@ -1971,14 +1974,16 @@ ${bodyEl.innerHTML}
         }
       });
 
-      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      const html = `<html xmlns:v="urn:schemas-microsoft-com:vml"
+xmlns:o="urn:schemas-microsoft-com:office:office"
 xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
 xmlns="http://www.w3.org/TR/REC-html40">
 <head>
-<meta charset="UTF-8">
-<meta name=ProgId content=Word.Document>
-<meta name=Generator content="Microsoft Word 15">
-<meta name=Originator content="Microsoft Word 15">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="Microsoft Word 15">
+<meta name="Originator" content="Microsoft Word 15">
 <title>${title}</title>
 <!--[if gte mso 9]>
 <xml>
@@ -1986,11 +1991,48 @@ xmlns="http://www.w3.org/TR/REC-html40">
   <w:View>Print</w:View>
   <w:Zoom>100</w:Zoom>
   <w:DoNotOptimizeForBrowser/>
+  <w:BrowserLevel>MicrosoftInternetExplorer4</w:BrowserLevel>
+  <w:TargetScreenSize>1024x768</w:TargetScreenSize>
+  <w:TrackMoves>false</w:TrackMoves>
+  <w:TrackFormatting/>
+  <w:ValidateAgainstSchemas/>
+  <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
+  <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
+  <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
+  <w:Compatibility>
+    <w:BreakWrappedTables/>
+    <w:SnapToGridInCell/>
+    <w:WrapTextWithPunct/>
+    <w:UseAsianBreakRules/>
+    <w:DontGrowAutofit/>
+  </w:Compatibility>
 </w:WordDocument>
 </xml>
 <![endif]-->
+<xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+  <w:BrowserLevel>MicrosoftInternetExplorer4</w:BrowserLevel>
+  <w:TargetScreenSize>1024x768</w:TargetScreenSize>
+  <w:Compatibility>
+    <w:BreakWrappedTables/>
+    <w:SnapToGridInCell/>
+    <w:WrapTextWithPunct/>
+    <w:UseAsianBreakRules/>
+    <w:DontGrowAutofit/>
+  </w:Compatibility>
+</w:WordDocument>
+</xml>
 <style>
+@page {
+  mso-page-orientation: portrait;
+  size: 595.3pt 841.9pt;
+  margin: 15mm 15mm 15mm 15mm;
+}
 @page Section1 {
+  mso-page-orientation: portrait;
   size: 595.3pt 841.9pt;
   margin: 15mm 15mm 15mm 15mm;
   mso-header-margin: 0pt;
@@ -2025,7 +2067,7 @@ ${clean.innerHTML}
 </div>
 </body>
 </html>`;
-      const filename = baseName(SOURCE_FILE_NAME) + '_report.doc';
+      const filename = baseName(SOURCE_FILE_NAME) + '.doc';
       const blob = new Blob(['\ufeff', html], {type:'application/msword'});
       const saved = await saveFileWithPicker(blob, filename, 'application/msword', 'Word Document (*.doc)');
       if (saved) showToast('Word document saved.');
@@ -2053,11 +2095,15 @@ ${clean.innerHTML}
     printRoot.appendChild(clean);
     document.body.appendChild(printRoot);
 
+    const origTitle = document.title;
+    document.title = baseName(SOURCE_FILE_NAME);
+
     return new Promise((resolve)=>{
       let done = false;
       const cleanup = () => {
         if (done) return;
         done = true;
+        document.title = origTitle;
         window.removeEventListener('afterprint', cleanup);
         printRoot.remove();
         resolve();
