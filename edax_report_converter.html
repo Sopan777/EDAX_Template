@@ -216,6 +216,30 @@
   .chk-line{display:flex;align-items:center;gap:8px;}
   .chk-box{width:13px;height:13px;flex:none;cursor:pointer;}
 
+  /* Investigation format tables */
+  table.invest-grid{width:100%;border-collapse:collapse;font-size:12px;border:1px solid #000080;margin-bottom:0;}
+  table.invest-grid td{border:1px solid #000080;padding:4px 7px;vertical-align:top;}
+  table.invest-grid .lbl{color:#222;background:#ffffff;font-weight:600;width:210px;text-align:left;}
+  table.invest-grid .sec{background:#ffffff;font-weight:700;}
+  table.invest-grid .val{min-width:120px;}
+  table.invest-grid .chk-row td{padding:4px 7px 4px 16px;}
+  table.invest-grid td.chk-indicator{text-align:center;font-weight:700;font-family:Arial,sans-serif;font-size:13px;}
+  .invest-notes-box{
+    min-height:90px;
+    padding:4px 2px;
+    font-size:13px;
+    line-height:1.5;
+    font-family:"Times New Roman",Georgia,serif;
+    outline:none;
+  }
+  .invest-notes-box:empty:before{
+    content:attr(placeholder);
+    color:#8a92a8;
+    font-style:italic;
+    font-family:"Segoe UI",system-ui,sans-serif;
+    font-size:11.5px;
+  }
+
   /* two-column site page (info boxes + image col + comment col) --
      built as real <table> layouts (see twoColTable in JS) since Word's
      HTML engine does not support CSS grid or flexbox at all. */
@@ -352,6 +376,9 @@
     table.cover-grid td{
       padding: 3.5px 7px !important;
     }
+    table.invest-grid td{
+      padding: 3px 6px !important;
+    }
     .cover-title-row td{
       padding: 8px 12px !important;
     }
@@ -478,6 +505,13 @@
       </div>
       <div class="panel">
         <h3>Report Options</h3>
+        <div class="opt-field" style="margin-bottom:12px;">
+          <label>Report Format</label>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <button type="button" id="sideFmtNormalBtn" class="btn small" style="flex:1;background:#2a3970;color:#fff;">Normal</button>
+            <button type="button" id="sideFmtInvestBtn" class="btn small ghost" style="flex:1;">Investigation</button>
+          </div>
+        </div>
         <label class="opt-check-line">
           <input type="checkbox" id="includeCommentsToggle" checked />
           <span>Include Comments table</span>
@@ -495,6 +529,7 @@
           <select id="releasedBySelect">
             <option value="">&mdash; Select &mdash;</option>
             <option value="J R Nagrale" selected>J R Nagrale</option>
+            <option value="Nagrale J.R.  – PS/QMM8-NaPS">Nagrale J.R.  – PS/QMM8-NaPS</option>
             <option value="Amit Darade">Amit Darade</option>
           </select>
         </div>
@@ -510,7 +545,11 @@
     <div class="canvas-wrap">
       <div class="canvas-toolbar">
         <div class="edit-tip"><span class="dot"></span> Click any text or table cell to edit it directly</div>
-        <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn small" id="formatToggleBtn" type="button" style="display:inline-flex;align-items:center;gap:6px;background:#000080;border-color:#000080;color:#fff;font-weight:700;" title="Switch between Normal and Investigation format">
+            <span id="formatToggleIcon">📋</span>
+            <span id="formatToggleText">Investigation format</span>
+          </button>
           <button class="btn small brass" id="previewBtn" type="button">Preview &amp; Export &rarr;</button>
         </div>
       </div>
@@ -1145,7 +1184,70 @@
     return sheet;
   }
 
-  // ---- Cover page (page 1) ----
+  let REPORT_FORMAT = 'normal'; // 'normal' | 'investigation'
+
+  function createPersonCell(kind, defaultOptions, sidebarSelectId, inlineSelectId, defaultVal){
+    const wrap = el('div', { class:'person-field-wrap' });
+    const select = el('select', { class:'person-select-inline', id:inlineSelectId });
+    select.appendChild(el('option', { value:'', text:`— Select ${kind} —` }));
+    defaultOptions.forEach(opt => {
+      const optEl = el('option', { value:opt, text:opt });
+      if (defaultVal && opt === defaultVal) optEl.selected = true;
+      select.appendChild(optEl);
+    });
+    select.appendChild(el('option', { value:'__custom__', text:'Type manually...' }));
+
+    const nameText = el('div', {
+      class: 'person-name-text',
+      contenteditable: 'true',
+      placeholder: 'Click to type or select above...'
+    });
+
+    const sidebarSel = $(sidebarSelectId);
+    const chosenVal = (sidebarSel && sidebarSel.value) ? sidebarSel.value : (defaultVal || '');
+    if (chosenVal){
+      select.value = chosenVal;
+      nameText.textContent = chosenVal;
+      if (sidebarSel) sidebarSel.value = chosenVal;
+    }
+
+    select.addEventListener('change', ()=>{
+      if (select.value === '__custom__'){
+        nameText.textContent = '';
+        nameText.focus();
+        if (sidebarSel) sidebarSel.value = '';
+      } else {
+        nameText.textContent = select.value;
+        if (sidebarSel) sidebarSel.value = select.value;
+      }
+    });
+
+    nameText.addEventListener('input', ()=>{
+      const val = nameText.textContent.trim();
+      let matched = false;
+      for (let i = 0; i < select.options.length; i++){
+        if (select.options[i].value === val){
+          select.selectedIndex = i;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && val){
+        select.value = '__custom__';
+      } else if (!val){
+        select.selectedIndex = 0;
+      }
+      if (sidebarSel) {
+        sidebarSel.value = matched ? val : '';
+      }
+    });
+
+    wrap.appendChild(select);
+    wrap.appendChild(nameText);
+    return wrap;
+  }
+
+  // ---- Cover page (Normal format) ----
   function coverPair(labelText, valueText, boldValue){
     return [
       el('td', { class:'lbl', contenteditable:'true', text: labelText }),
@@ -1224,72 +1326,13 @@
      ['Injector no.',''], ['Mfd & Sr. no.',''], ['Location of particle',''], ['Sample Submission date','']
     ].forEach(([l,v]) => table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:l}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:v}) ])));
 
-  function createPersonCell(kind, defaultOptions, sidebarSelectId, inlineSelectId, defaultVal){
-    const wrap = el('div', { class:'person-field-wrap' });
-    const select = el('select', { class:'person-select-inline', id:inlineSelectId });
-    select.appendChild(el('option', { value:'', text:`— Select ${kind} —` }));
-    defaultOptions.forEach(opt => {
-      const optEl = el('option', { value:opt, text:opt });
-      if (defaultVal && opt === defaultVal) optEl.selected = true;
-      select.appendChild(optEl);
-    });
-    select.appendChild(el('option', { value:'__custom__', text:'Type manually...' }));
-
-    const nameText = el('div', {
-      class: 'person-name-text',
-      contenteditable: 'true',
-      placeholder: 'Click to type or select above...'
-    });
-
-    const sidebarSel = $(sidebarSelectId);
-    const chosenVal = (sidebarSel && sidebarSel.value) ? sidebarSel.value : (defaultVal || '');
-    if (chosenVal){
-      select.value = chosenVal;
-      nameText.textContent = chosenVal;
-      if (sidebarSel) sidebarSel.value = chosenVal;
-    }
-
-    select.addEventListener('change', ()=>{
-      if (select.value === '__custom__'){
-        nameText.textContent = '';
-        nameText.focus();
-        if (sidebarSel) sidebarSel.value = '';
-      } else {
-        nameText.textContent = select.value;
-        if (sidebarSel) sidebarSel.value = select.value;
-      }
-    });
-
-    nameText.addEventListener('input', ()=>{
-      const val = nameText.textContent.trim();
-      let matched = false;
-      for (let i = 0; i < select.options.length; i++){
-        if (select.options[i].value === val){
-          select.selectedIndex = i;
-          matched = true;
-          break;
-        }
-      }
-      if (!matched && val){
-        select.value = '__custom__';
-      } else if (!val){
-        select.selectedIndex = 0;
-      }
-      if (sidebarSel) {
-        sidebarSel.value = matched ? val : '';
-      }
-    });
-
-    wrap.appendChild(select);
-    wrap.appendChild(nameText);
-    return wrap;
-  }
-
+    const prepVal = ($('#preparedBySelect') && $('#preparedBySelect').value) || 'N R Khairnar';
+    const relVal = ($('#releasedBySelect') && $('#releasedBySelect').value) || 'J R Nagrale';
     const prepCell = el('td', { class:'val person-cell', id:'preparedByCell' }, [
-      createPersonCell('Prepared by', ['N R Khairnar', 'Amit Darade'], '#preparedBySelect', 'preparedByInlineSelect', 'N R Khairnar')
+      createPersonCell('Prepared by', ['N R Khairnar', 'Amit Darade'], '#preparedBySelect', 'preparedByInlineSelect', prepVal)
     ]);
     const relCell = el('td', { class:'val person-cell', id:'releasedByCell' }, [
-      createPersonCell('Released by', ['J R Nagrale', 'Amit Darade'], '#releasedBySelect', 'releasedByInlineSelect', 'J R Nagrale')
+      createPersonCell('Released by', ['J R Nagrale', 'Nagrale J.R.  \u2013 PS/QMM8-NaPS', 'Amit Darade'], '#releasedBySelect', 'releasedByInlineSelect', relVal)
     ]);
 
     table.appendChild(coverRow([
@@ -1303,9 +1346,316 @@
     return sheet;
   }
 
+  // ---- Cover pages (Investigation format: Table 0 = Page 1, Table 1 = Page 2) ----
+  function investChecklistRow(text, defaultChecked){
+    const cb = el('input', { type:'checkbox', class:'chk-box' });
+    cb.checked = !!defaultChecked;
+    const line = el('label', { class:'chk-line' }, [ cb, el('span', { text: text }) ]);
+    const indicator = el('td', { class:'val chk-indicator', colspan:'1', text: defaultChecked ? '\u2713' : '\u2717' });
+    cb.addEventListener('change', ()=>{ indicator.textContent = cb.checked ? '\u2713' : '\u2717'; });
+    return el('tr', { class:'chk-row' }, [ el('td', { colspan:'3', style:'padding-left:14px;' }, [line]), indicator ]);
+  }
+
+  function renderInvestigationCover1(model){
+    const table = el('table', { class:'invest-grid' });
+
+    // Row 00: Title row
+    table.appendChild(el('tr', { class:'cover-title-row' }, [
+      el('td', { class:'small', style:'width:200px;', contenteditable:'true', text:'RBIN/NaP-QMM8' }),
+      el('td', { class:'big', colspan:'3', contenteditable:'true', text:'SEM  analysis report' })
+    ]));
+
+    // Row 01: Report Date / Report No.
+    table.appendChild(coverRow([
+      el('td', { class:'lbl', contenteditable:'true', text:'Report Date' }),
+      el('td', { class:'val', contenteditable:'true', text:': ' + todayStr() }),
+      el('td', { class:'lbl', contenteditable:'true', text:'Report No.' }),
+      el('td', { class:'val', contenteditable:'true', text:': ' })
+    ]));
+
+    // Row 02: Production / 0 Km
+    const prodCb = el('input', { type:'checkbox', class:'chk-box' });
+    const prodInd = el('td', { class:'val chk-indicator', text:'' });
+    const zeroKmCb = el('input', { type:'checkbox', class:'chk-box' });
+    const zeroKmInd = el('td', { class:'val chk-indicator', text:'' });
+    prodCb.addEventListener('change', ()=>{ prodInd.textContent = prodCb.checked ? '\u2713' : ''; });
+    zeroKmCb.addEventListener('change', ()=>{ zeroKmInd.textContent = zeroKmCb.checked ? '\u2713' : ''; });
+    table.appendChild(coverRow([
+      el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ prodCb, el('span', { text:'Production' }) ]) ]),
+      prodInd,
+      el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ zeroKmCb, el('span', { text:'0 Km' }) ]) ]),
+      zeroKmInd
+    ]));
+
+    // Row 03: Investigation (default checked) / Field (default checked)
+    const investCb = el('input', { type:'checkbox', class:'chk-box' });
+    investCb.checked = true;
+    const investInd = el('td', { class:'val chk-indicator', text:'\u2713' });
+    const fieldCb = el('input', { type:'checkbox', class:'chk-box' });
+    fieldCb.checked = true;
+    const fieldInd = el('td', { class:'val chk-indicator', text:'\u2713' });
+    investCb.addEventListener('change', ()=>{ investInd.textContent = investCb.checked ? '\u2713' : ''; });
+    fieldCb.addEventListener('change', ()=>{ fieldInd.textContent = fieldCb.checked ? '\u2713' : ''; });
+    table.appendChild(coverRow([
+      el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ investCb, el('span', { text:'Investigation' }) ]) ]),
+      investInd,
+      el('td', { class:'lbl' }, [ el('label', { class:'chk-line' }, [ fieldCb, el('span', { text:'Field' }) ]) ]),
+      fieldInd
+    ]));
+
+    // Row 04: Issued By
+    table.appendChild(coverRow([
+      el('td', { class:'lbl', contenteditable:'true', text:'Issued By' }),
+      el('td', { class:'val', colspan:'3', contenteditable:'true', text:': PS/QMM8-NaP' })
+    ]));
+
+    // Row 05: Distribution
+    table.appendChild(coverRow([
+      el('td', { class:'lbl', contenteditable:'true', text:'Distribution:' }),
+      el('td', { class:'val', colspan:'3', contenteditable:'true', text:'' })
+    ]));
+
+    // Row 06: Subject
+    table.appendChild(coverRow([
+      el('td', { class:'lbl', contenteditable:'true', text:'Subject' }),
+      el('td', { class:'val', colspan:'3', contenteditable:'true', text:': Investigation of ...........' })
+    ]));
+
+    // Row 07: 1) Task
+    table.appendChild(coverRow([
+      el('td', { class:'lbl', contenteditable:'true', text:'1)  Task' }),
+      el('td', { class:'val', colspan:'3', contenteditable:'true', text:': Investigation of ...........' })
+    ]));
+
+    // Row 08: 2) Performed tests
+    table.appendChild(el('tr', null, [
+      el('td', { class:'sec', colspan:'4', contenteditable:'true', text:'2)  Performed tests' })
+    ]));
+
+    // Rows 09-12: Tests checklist
+    table.appendChild(investChecklistRow('1. Scanning Electron Microscope', true));
+    table.appendChild(investChecklistRow('2. EDAX - Analysis', true));
+    table.appendChild(investChecklistRow('3. Optical Microscope', false));
+    table.appendChild(investChecklistRow('4. Hardness measurement', false));
+
+    // Row 13: 3) Sample preparation for SEM and EDAX
+    table.appendChild(el('tr', null, [
+      el('td', { class:'sec', colspan:'4', contenteditable:'true', text:'3)  Sample preparation for SEM and EDAX:' })
+    ]));
+
+    // Row 14:
+    table.appendChild(coverRow([
+      el('td', { class:'val', colspan:'4', contenteditable:'true', text:'Particles placed on carbon tape stub.' })
+    ]));
+
+    // Row 15: 4) Sample preparation for microstructure investigation
+    table.appendChild(el('tr', null, [
+      el('td', { class:'sec', colspan:'4', contenteditable:'true', text:'4)  Sample preparation for microstructure investigation :' })
+    ]));
+
+    // Row 16: 5) Calibration
+    table.appendChild(el('tr', null, [
+      el('td', { class:'sec', colspan:'4', contenteditable:'true', text:'5) Calibration' })
+    ]));
+
+    // Row 17: Calibration note
+    table.appendChild(coverRow([
+      el('td', { class:'val', colspan:'4', contenteditable:'true', text:'EDAX Unit was calibrated with cobalt reference standard. EDAX analysis was performed under similar conditions with the following SEM/EDAX parameters.' })
+    ]));
+
+    // Row 18: Parameters line 1
+    table.appendChild(coverRow([
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'EHT:    20KV' }),
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'WD:   8.5mm' }),
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'Spot size :' }),
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'' })
+    ]));
+
+    // Row 19: Parameters line 2
+    table.appendChild(coverRow([
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'Signal: SE/BSD' }),
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'Dead time :30-40 %' }),
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:"Live time : 50'" }),
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'' })
+    ]));
+
+    // Row 20: 6) Sample details
+    table.appendChild(el('tr', null, [
+      el('td', { class:'sec', colspan:'4', contenteditable:'true', text:'6) Sample details' })
+    ]));
+
+    // Rows 21-26: Details
+    [
+      ['Requisition Dept.', ''],
+      ['Requisition dept complaint No.', ''],
+      ['External Customer .', ''],
+      ['MFD & Sr. No.', ''],
+      ['Part Name & Number', ''],
+      ['Sample Submission date', '']
+    ].forEach(([l, v]) => {
+      table.appendChild(coverRow([
+        el('td', { class:'lbl', contenteditable:'true', text:l }),
+        el('td', { class:'val', colspan:'3', contenteditable:'true', text:v })
+      ]));
+    });
+
+    // Row 27: Additional information
+    const addInfoBox = el('div', {
+      class: 'invest-notes-box',
+      contenteditable: 'true',
+      style: 'min-height:75px;margin-top:4px;',
+      placeholder: 'Click to type additional information...'
+    });
+    table.appendChild(coverRow([
+      el('td', { class:'val', colspan:'4' }, [
+        el('strong', { text:'Additional information :' }),
+        addInfoBox
+      ])
+    ]));
+
+    const sheet = el('div', { class:'sheet', id:'investigationCoverSheet1' }, [ table ]);
+    return sheet;
+  }
+
+  function renderInvestigationCover2(model){
+    const table = el('table', { class:'invest-grid' });
+
+    // Row 00: Title row
+    table.appendChild(el('tr', { class:'cover-title-row' }, [
+      el('td', { class:'small', style:'width:200px;', contenteditable:'true', text:'PS/QMM8-NaP' }),
+      el('td', { class:'big', colspan:'2', contenteditable:'true', text:'SEM  analysis report' })
+    ]));
+
+    // Row 01: Observations
+    const obsBox = el('div', {
+      class: 'invest-notes-box',
+      contenteditable: 'true',
+      style: 'min-height:160px;margin-top:4px;',
+      placeholder: 'Click to type observations...'
+    });
+    table.appendChild(coverRow([
+      el('td', { class:'val', colspan:'3' }, [
+        el('strong', { text:'Observations :' }),
+        obsBox
+      ])
+    ]));
+
+    // Row 02: Conclusions
+    const concBox = el('div', {
+      class: 'invest-notes-box',
+      contenteditable: 'true',
+      style: 'min-height:160px;margin-top:4px;',
+      placeholder: 'Click to type conclusions...'
+    });
+    table.appendChild(coverRow([
+      el('td', { class:'val', colspan:'3' }, [
+        el('strong', { text:'Conclusions :' }),
+        concBox
+      ])
+    ]));
+
+    // Row 03: Proposals
+    const propBox = el('div', {
+      class: 'invest-notes-box',
+      contenteditable: 'true',
+      style: 'min-height:120px;margin-top:4px;',
+      placeholder: 'Click to type proposals...'
+    });
+    table.appendChild(coverRow([
+      el('td', { class:'val', colspan:'3' }, [
+        el('strong', { text:'Proposals :' }),
+        propBox
+      ])
+    ]));
+
+    // Row 04: Spacer row
+    table.appendChild(coverRow([
+      el('td', { class:'val', colspan:'3', style:'height:14px;padding:2px;' })
+    ]));
+
+    // Row 05: Prepared By / Released by header labels
+    table.appendChild(coverRow([
+      el('td', { class:'sec', style:'width:50%;font-weight:bold;', text:'Prepared By' }),
+      el('td', { class:'sec', colspan:'2', style:'width:50%;font-weight:bold;', text:'Released by' })
+    ]));
+
+    // Row 06: Signatures
+    const prepVal = ($('#preparedBySelect') && $('#preparedBySelect').value) || 'N R Khairnar';
+    const relVal = ($('#releasedBySelect') && $('#releasedBySelect').value) || 'Nagrale J.R.  – PS/QMM8-NaPS';
+    const prepCell = el('td', { class:'val person-cell', id:'investPreparedByCell' }, [
+      createPersonCell('Prepared by', ['N R Khairnar', 'Amit Darade'], '#preparedBySelect', 'investPreparedByInline', prepVal)
+    ]);
+    const relCell = el('td', { class:'val person-cell', colspan:'2', id:'investReleasedByCell' }, [
+      createPersonCell('Released by', ['J R Nagrale', 'Nagrale J.R.  \u2013 PS/QMM8-NaPS', 'Amit Darade'], '#releasedBySelect', 'investReleasedByInline', relVal)
+    ]);
+
+    table.appendChild(coverRow([ prepCell, relCell ]));
+
+    const sheet = el('div', { class:'sheet', id:'investigationCoverSheet2' }, [ table ]);
+    return sheet;
+  }
+
+  function setReportFormat(fmt){
+    if (REPORT_FORMAT === fmt) return;
+    REPORT_FORMAT = fmt;
+    updateFormatUi();
+    if (MODEL){
+      const rr = $('#reportRoot');
+      rr.innerHTML = '';
+      rr.appendChild(renderReport(MODEL));
+      $all('[contenteditable]', rr).forEach(n => { n.spellcheck = false; });
+      renderOutline(MODEL);
+    }
+    showToast(`Switched to ${fmt === 'investigation' ? 'Investigation' : 'Normal'} format.`);
+  }
+
+  function updateFormatUi(){
+    const isInvest = REPORT_FORMAT === 'investigation';
+    const btn = $('#formatToggleBtn');
+    const txt = $('#formatToggleText');
+    const icon = $('#formatToggleIcon');
+    if (btn && txt){
+      if (isInvest){
+        txt.textContent = 'Normal format';
+        if (icon) icon.textContent = '📄';
+        btn.style.background = '#2a3970';
+        btn.style.borderColor = '#2a3970';
+      } else {
+        txt.textContent = 'Investigation format';
+        if (icon) icon.textContent = '📋';
+        btn.style.background = '#000080';
+        btn.style.borderColor = '#000080';
+      }
+    }
+    const sNorm = $('#sideFmtNormalBtn');
+    const sInv = $('#sideFmtInvestBtn');
+    if (sNorm && sInv){
+      if (isInvest){
+        sNorm.className = 'btn small ghost';
+        sNorm.style.background = '#ffffff';
+        sNorm.style.color = '#2a3970';
+        sInv.className = 'btn small';
+        sInv.style.background = '#000080';
+        sInv.style.color = '#ffffff';
+      } else {
+        sNorm.className = 'btn small';
+        sNorm.style.background = '#2a3970';
+        sNorm.style.color = '#ffffff';
+        sInv.className = 'btn small ghost';
+        sInv.style.background = '#ffffff';
+        sInv.style.color = '#2a3970';
+      }
+    }
+  }
+
   function renderReport(model){
     const root = el('div', { id:'reportRootInner' });
-    root.appendChild(renderCover(model));
+    if (REPORT_FORMAT === 'investigation'){
+      root.appendChild(renderInvestigationCover1(model));
+      root.appendChild(renderInvestigationCover2(model));
+    } else {
+      root.appendChild(renderCover(model));
+    }
 
     model.project.specimens.forEach((specimen, sIdx) => {
       specimen.sites.forEach((site, siteIdx) => {
@@ -1319,7 +1669,12 @@
   function renderOutline(model){
     const list = $('#outlineList');
     list.innerHTML = '';
-    list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#coverSheet', text: 'Cover Page' }) ]));
+    if (REPORT_FORMAT === 'investigation'){
+      list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#investigationCoverSheet1', text: 'Investigation Page 1' }) ]));
+      list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#investigationCoverSheet2', text: 'Observations & Conclusions (Page 2)' }) ]));
+    } else {
+      list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#coverSheet', text: 'Cover Page' }) ]));
+    }
     model.project.specimens.forEach((sp, sIdx) => {
       list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#specimen_'+sIdx+'_site_0', text: sp.title }) ]));
       sp.sites.forEach((site, siteIdx) => {
@@ -1476,10 +1831,29 @@
   $('#fileInput').addEventListener('change', (e)=> handleFile(e.target.files[0]));
   $('#startOverBtn').addEventListener('click', ()=>{
     resetToUpload();
+    REPORT_FORMAT = 'normal';
+    updateFormatUi();
     $('#includeCommentsToggle').checked = true;
-    $('#preparedBySelect').value = '';
-    $('#releasedBySelect').value = '';
+    if ($('#preparedBySelect')) $('#preparedBySelect').value = 'N R Khairnar';
+    if ($('#releasedBySelect')) $('#releasedBySelect').value = 'J R Nagrale';
   });
+
+  // Report Format toggle buttons (Canvas toolbar + Sidebar)
+  const fmtToggleBtn = $('#formatToggleBtn');
+  if (fmtToggleBtn){
+    fmtToggleBtn.addEventListener('click', () => {
+      setReportFormat(REPORT_FORMAT === 'investigation' ? 'normal' : 'investigation');
+    });
+  }
+  const sNormBtn = $('#sideFmtNormalBtn');
+  if (sNormBtn){
+    sNormBtn.addEventListener('click', () => setReportFormat('normal'));
+  }
+  const sInvBtn = $('#sideFmtInvestBtn');
+  if (sInvBtn){
+    sInvBtn.addEventListener('click', () => setReportFormat('investigation'));
+  }
+
   $('#previewBtn').addEventListener('click', goToPreview);
   $('#backToEditBtn').addEventListener('click', backToEdit);
   const tbBack = $('#toolbarBackToEditBtn');
@@ -1521,16 +1895,24 @@
   // Report Options: Prepared by / Released by presets fill the cover-sheet
   // fields, keeping sidebar and on-page dropdowns completely synchronized.
   $('#preparedBySelect').addEventListener('change', function(){
-    const inlineSel = $('#preparedByInlineSelect');
-    const txt = $('#preparedByCell .person-name-text');
-    if (inlineSel) inlineSel.value = this.value;
-    if (txt) txt.textContent = this.value;
+    ['#preparedByInlineSelect', '#investPreparedByInline'].forEach(sel => {
+      const el = $(sel);
+      if (el) el.value = this.value;
+    });
+    ['#preparedByCell .person-name-text', '#investPreparedByCell .person-name-text'].forEach(sel => {
+      const txt = $(sel);
+      if (txt) txt.textContent = this.value;
+    });
   });
   $('#releasedBySelect').addEventListener('change', function(){
-    const inlineSel = $('#releasedByInlineSelect');
-    const txt = $('#releasedByCell .person-name-text');
-    if (inlineSel) inlineSel.value = this.value;
-    if (txt) txt.textContent = this.value;
+    ['#releasedByInlineSelect', '#investReleasedByInline'].forEach(sel => {
+      const el = $(sel);
+      if (el) el.value = this.value;
+    });
+    ['#releasedByCell .person-name-text', '#investReleasedByCell .person-name-text'].forEach(sel => {
+      const txt = $(sel);
+      if (txt) txt.textContent = this.value;
+    });
   });
 
   const dropCard = $('#dropCard');
@@ -1637,6 +2019,7 @@
           break-after: avoid;
         }
         table.cover-grid td { padding: 3.5px 7px; }
+        table.invest-grid td { padding: 3px 6px; }
         .cover-title-row td { padding: 8px 12px; }
         table.site-header-bar {
           break-after: avoid;
@@ -1673,6 +2056,12 @@
       table { border-collapse: collapse; }
       .cover-grid { width: 100%; font-size: 13px; }
       .cover-grid td { border: 1px solid #97a0bd; padding: 4px 8px; vertical-align: top; }
+      table.invest-grid { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid #000080; margin-bottom: 0; }
+      table.invest-grid td { border: 1px solid #000080; padding: 4px 7px; vertical-align: top; }
+      table.invest-grid .lbl { color: #222; background: #ffffff; font-weight: 600; width: 210px; text-align: left; }
+      table.invest-grid .sec { background: #ffffff; font-weight: 700; }
+      table.invest-grid td.chk-indicator { text-align: center; font-weight: 700; font-family: Arial, sans-serif; font-size: 13px; }
+      .invest-notes-box { font-size: 12.5px; line-height: 1.5; font-family: "Times New Roman", Georgia, serif; padding: 4px 2px; }
       .cover-title-row td { background: #000080; color: #fff; font-weight: 700; border: 1px solid #000080; padding: 10px 14px; }
       .cover-title-row td.big { font-size: 17px; text-align: center; }
       .cover-title-row td.small { font-size: 14px; }
@@ -1773,6 +2162,13 @@ ${bodyEl.innerHTML}
     apply('table.cover-grid td.lbl', 'background:#f4f5fa;font-weight:bold;width:200px;text-align:left;');
     apply('table.cover-grid td.sec', 'background:#e7e9f3;font-weight:bold;');
     apply('table.cover-grid td.chk-indicator', 'text-align:center;font-weight:bold;font-family:Arial,sans-serif;');
+
+    apply('table.invest-grid', 'width:100%;border-collapse:collapse;font-size:12px;font-family:"Times New Roman",Georgia,serif;border:1px solid #000080;mso-table-layout-alt:fixed;');
+    apply('table.invest-grid td', 'border:1px solid #000080;padding:4px 7px;vertical-align:top;');
+    apply('table.invest-grid td.lbl', 'background:#ffffff;font-weight:bold;width:210px;text-align:left;');
+    apply('table.invest-grid td.sec', 'background:#ffffff;font-weight:bold;');
+    apply('table.invest-grid td.chk-indicator', 'text-align:center;font-weight:bold;font-family:Arial,sans-serif;font-size:13px;');
+    apply('.invest-notes-box', 'font-size:12px;line-height:1.45;font-family:"Times New Roman",Georgia,serif;padding:4px 2px;');
 
     apply('table.twocol', 'width:100%;border-collapse:collapse;table-layout:fixed;mso-table-layout-alt:fixed;margin-bottom:10px;');
     apply('table.twocol.info-row', 'page-break-inside:avoid;page-break-after:avoid;margin-bottom:10px;');
@@ -1900,7 +2296,7 @@ ${bodyEl.innerHTML}
     });
 
     // Add explicit HTML borders for Word compatibility
-    $all('table.cover-grid, table.comment-table, table.details-mini', root).forEach(t => {
+    $all('table.cover-grid, table.invest-grid, table.comment-table, table.details-mini', root).forEach(t => {
       t.setAttribute('border', '1');
     });
   }
