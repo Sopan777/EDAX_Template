@@ -1120,11 +1120,7 @@
       if (special === '__photos__'){
         valueCell = el('td', { class:'c-value' }, [ renderPhotoField() ]);
       } else {
-        let prefill = '';
-        if (label === 'Length in \u00b5m' || label === 'Width in \u00b5m'){
-          prefill = ' \u00b5m';
-        }
-        valueCell = el('td', { class:'c-value', contenteditable:'true', text: prefill });
+        valueCell = el('td', { class:'c-value', contenteditable:'true', text: '' });
       }
       table.appendChild(el('tr', null, [ labelCell, valueCell ]));
     });
@@ -1171,7 +1167,9 @@
     const rightBox = el('div', { class:'info-box' });
     const r1 = el('div', { class:'ln' });
     r1.appendChild(document.createTextNode('Sample: '));
-    r1.appendChild(echoField('specimenSample_' + specimenIdx, 'Sample 1', 'span'));
+    const sp = MODEL && MODEL.project && MODEL.project.specimens && MODEL.project.specimens[specimenIdx];
+    const sampleVal = (sp && sp.title) ? sp.title : ('Sample ' + (specimenIdx + 1));
+    r1.appendChild(echoField('specimenSample_' + specimenIdx, sampleVal, 'span'));
     rightBox.appendChild(r1);
     const r2 = el('div', { class:'ln' });
     r2.appendChild(document.createTextNode('Type: '));
