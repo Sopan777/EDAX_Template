@@ -603,7 +603,7 @@
         <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn small ghost" id="toolbarBackToEditBtn" type="button" style="font-weight:700;">&larr; Back to Edit</button>
           <button class="btn small" id="exportHtmlBtn" type="button">Export HTML</button>
-          <button class="btn small" id="exportDocBtn" type="button">Export Word</button>
+          <button class="btn small" id="exportDocBtn" type="button">Export Word (.docx)</button>
           <button class="btn small" id="exportPdfBtn" type="button">Export PDF</button>
           <button class="btn small brass" id="exportBothBtn" type="button">Export Word + PDF</button>
         </div>
@@ -2178,8 +2178,7 @@ ${bodyEl.innerHTML}
   }
 
   /* ============================================================
-     6. Export: Word (.doc) — Word-compatible HTML, same technique
-        the reference report itself was produced with.
+     6. Export: Word (.docx) — Pure JavaScript OOXML Package
   ============================================================ */
   // Word's HTML import engine (and older LibreOffice/Google Docs importers)
   // only reliably honours inline style="" attributes — <style> block rules,
@@ -2469,6 +2468,195 @@ ${bodyEl.innerHTML}
     return Promise.all($all('img', root).map(convertImgToPngIfNeeded));
   }
 
+  function createDocxBlob(htmlString){
+    const encoder = new TextEncoder();
+
+    // Standard CRC-32 lookup table
+    const crcTable = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) {
+        c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      }
+      crcTable[i] = c >>> 0;
+    }
+    function getCrc32(bytes) {
+      let crc = 0xFFFFFFFF;
+      for (let i = 0; i < bytes.length; i++) {
+        crc = (crc >>> 8) ^ crcTable[(crc ^ bytes[i]) & 0xFF];
+      }
+      return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="html" ContentType="text/html"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+
+    const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+    const docRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="htmlChunk1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk" Target="chunk.html"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+    const settingsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:view w:val="print"/>
+  <w:zoom w:percent="100"/>
+  <w:doNotOptimizeForBrowser/>
+</w:settings>`;
+
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:lang w:val="en-US"/>
+      </w:rPr>
+    </w:rPrDefault>
+    <w:pPrDefault>
+      <w:pPr>
+        <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+      </w:pPr>
+    </w:pPrDefault>
+  </w:docDefaults>
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+    <w:qFormat/>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    </w:pPr>
+  </w:style>
+  <w:style w:type="table" w:default="1" w:styleId="TableNormal">
+    <w:name w:val="Normal Table"/>
+    <w:tblPr>
+      <w:tblCellMar>
+        <w:top w:w="0" w:type="dxa"/>
+        <w:bottom w:w="0" w:type="dxa"/>
+        <w:left w:w="0" w:type="dxa"/>
+        <w:right w:w="0" w:type="dxa"/>
+      </w:tblCellMar>
+    </w:tblPr>
+  </w:style>
+</w:styles>`;
+
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    <w:altChunk r:id="htmlChunk1"/>
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="567" w:right="720" w:bottom="567" w:left="720" w:header="0" w:footer="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+    const files = [
+      { name: '[Content_Types].xml', data: contentTypesXml },
+      { name: '_rels/.rels', data: rootRelsXml },
+      { name: 'word/_rels/document.xml.rels', data: docRelsXml },
+      { name: 'word/settings.xml', data: settingsXml },
+      { name: 'word/styles.xml', data: stylesXml },
+      { name: 'word/document.xml', data: documentXml },
+      { name: 'word/chunk.html', data: htmlString }
+    ];
+
+    const entries = files.map(f => {
+      const nameBytes = encoder.encode(f.name);
+      const dataBytes = (typeof f.data === 'string') ? encoder.encode(f.data) : f.data;
+      const crc = getCrc32(dataBytes);
+      return {
+        nameBytes,
+        dataBytes,
+        crc,
+        size: dataBytes.length
+      };
+    });
+
+    const localHeaders = [];
+    const centralHeaders = [];
+    let offset = 0;
+
+    for (const entry of entries) {
+      const localOffset = offset;
+      const localHeader = new Uint8Array(30 + entry.nameBytes.length);
+      const lv = new DataView(localHeader.buffer);
+      lv.setUint32(0, 0x04034b50, true); // Local file header signature
+      lv.setUint16(4, 20, true);         // Version needed: 2.0
+      lv.setUint16(6, 0x0800, true);     // General purpose bit flag: UTF-8
+      lv.setUint16(8, 0, true);          // Compression method: 0 (Stored)
+      lv.setUint16(10, 0, true);         // Last mod file time
+      lv.setUint16(12, 0x0021, true);    // Last mod file date (1980-01-01)
+      lv.setUint32(14, entry.crc, true); // CRC-32
+      lv.setUint32(18, entry.size, true);// Compressed size
+      lv.setUint32(22, entry.size, true);// Uncompressed size
+      lv.setUint16(26, entry.nameBytes.length, true); // Filename length
+      lv.setUint16(28, 0, true);         // Extra field length
+      localHeader.set(entry.nameBytes, 30);
+
+      localHeaders.push(localHeader);
+      localHeaders.push(entry.dataBytes);
+      offset += localHeader.length + entry.dataBytes.length;
+
+      const centralHeader = new Uint8Array(46 + entry.nameBytes.length);
+      const cv = new DataView(centralHeader.buffer);
+      cv.setUint32(0, 0x02014b50, true); // Central directory header signature
+      cv.setUint16(4, 20, true);         // Version made by: 2.0
+      cv.setUint16(6, 20, true);         // Version needed: 2.0
+      cv.setUint16(8, 0x0800, true);     // Flags: UTF-8
+      cv.setUint16(10, 0, true);         // Compression: Stored
+      cv.setUint16(12, 0, true);         // Last mod time
+      cv.setUint16(14, 0x0021, true);    // Last mod date
+      cv.setUint32(16, entry.crc, true); // CRC-32
+      cv.setUint32(20, entry.size, true);// Compressed size
+      cv.setUint32(24, entry.size, true);// Uncompressed size
+      cv.setUint16(28, entry.nameBytes.length, true); // Filename length
+      cv.setUint16(30, 0, true);         // Extra field length
+      cv.setUint16(32, 0, true);         // Comment length
+      cv.setUint16(34, 0, true);         // Disk number start
+      cv.setUint16(36, 0, true);         // Internal file attributes
+      cv.setUint32(38, 0, true);         // External file attributes
+      cv.setUint32(42, localOffset, true); // Relative offset of local header
+      centralHeader.set(entry.nameBytes, 46);
+
+      centralHeaders.push(centralHeader);
+    }
+
+    const centralDirOffset = offset;
+    let centralDirSize = 0;
+    for (const ch of centralHeaders) centralDirSize += ch.length;
+
+    const eocd = new Uint8Array(22);
+    const ev = new DataView(eocd.buffer);
+    ev.setUint32(0, 0x06054b50, true); // EOCD signature
+    ev.setUint16(4, 0, true);          // Disk number
+    ev.setUint16(6, 0, true);          // Start disk
+    ev.setUint16(8, entries.length, true);  // Entries on disk
+    ev.setUint16(10, entries.length, true); // Total entries
+    ev.setUint32(12, centralDirSize, true); // Central dir size
+    ev.setUint32(16, centralDirOffset, true);// Central dir offset
+    ev.setUint16(20, 0, true);          // Comment length
+
+    return new Blob([...localHeaders, ...centralHeaders, eocd], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+  }
+
   async function exportDoc(){
     if (!MODEL) return;
     const clean = buildCleanReportHTML();
@@ -2543,12 +2731,12 @@ xmlns="http://www.w3.org/TR/REC-html40">
 @page {
   mso-page-orientation: portrait;
   size: 595.3pt 841.9pt;
-  margin: 15mm 15mm 15mm 15mm;
+  margin: 10mm 12.7mm 10mm 12.7mm;
 }
 @page Section1 {
   mso-page-orientation: portrait;
   size: 595.3pt 841.9pt;
-  margin: 15mm 15mm 15mm 15mm;
+  margin: 10mm 12.7mm 10mm 12.7mm;
   mso-header-margin: 0pt;
   mso-footer-margin: 0pt;
   mso-paper-source: 0;
@@ -2570,8 +2758,13 @@ table {
 img {
   display: block;
 }
-p {
-  margin: 0;
+p, div, td, th, tr, table {
+  margin: 0 !important;
+  margin-bottom: 0pt !important;
+  margin-top: 0pt !important;
+  mso-margin-top-alt: 0pt !important;
+  mso-margin-bottom-alt: 0pt !important;
+  mso-pagination: none !important;
 }
 </style>
 </head>
@@ -2581,10 +2774,16 @@ ${clean.innerHTML}
 </div>
 </body>
 </html>`;
-      const filename = baseName(SOURCE_FILE_NAME) + '.doc';
-      const blob = new Blob(['\ufeff', html], {type:'application/msword'});
-      const saved = await saveFileWithPicker(blob, filename, 'application/msword', 'Word Document (*.doc)');
-      if (saved) showToast('Word document saved.');
+
+      const filename = baseName(SOURCE_FILE_NAME) + '.docx';
+      const docxBlob = createDocxBlob(html);
+      const saved = await saveFileWithPicker(
+        docxBlob,
+        filename,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Word Document (*.docx)'
+      );
+      if (saved) showToast('Word document (.docx) saved.');
     } catch(err){
       console.error(err);
       showToast('Word export failed: ' + err.message, true);
