@@ -201,18 +201,18 @@
   }
   .sheet + .sheet{margin-top:26px;}
 
-  .cover-grid, table.invest-grid{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:0;}
-  .cover-grid td, table.invest-grid td{border:1px solid #97a0bd;padding:5px 9px;vertical-align:top;}
-  .cover-title-row td{background:var(--navy) !important;color:#fff !important;font-weight:700;border:1px solid var(--navy) !important;padding:11px 14px;}
-  .cover-title-row td.big{font-size:17px;text-align:center;}
-  .cover-title-row td.small{font-size:14px;}
+  .cover-grid, table.invest-grid{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12.5px;margin-bottom:0;}
+  .cover-grid td, table.invest-grid td{border:1px solid #97a0bd;padding:4px 6px;vertical-align:top;box-sizing:border-box;}
+  .cover-title-row td{background:var(--navy) !important;color:#fff !important;font-weight:700;border:1px solid var(--navy) !important;padding:8px 10px;}
+  .cover-title-row td.big{font-size:16px;text-align:center;}
+  .cover-title-row td.small{font-size:13px;}
   .cover-title-row td[contenteditable="true"]:hover{background:#000066 !important;color:#fff !important;}
   .cover-title-row td[contenteditable="true"]:focus{background:#000080 !important;color:#fff !important;box-shadow:inset 0 0 0 2px #ffdd88 !important;outline:none !important;}
-  .cover-grid .lbl, table.invest-grid .lbl{color:#222;background:#f4f5fa;font-weight:600;width:220px;text-align:left;white-space:normal;}
+  .cover-grid .lbl, table.invest-grid .lbl{color:#222;background:#f4f5fa;font-weight:600;text-align:left;white-space:normal;}
   .cover-grid .sec, table.invest-grid .sec{background:#e7e9f3;font-weight:700;}
   .cover-grid .val, table.invest-grid .val{min-width:120px;background:#ffffff;}
-  .cover-grid .chk-row td, table.invest-grid .chk-row td{padding:4px 9px 4px 20px;}
-  .cover-grid td.chk-indicator, table.invest-grid td.chk-indicator{text-align:center;font-weight:700;font-family:Arial,sans-serif;font-size:13px;}
+  .cover-grid .chk-row td, table.invest-grid .chk-row td{padding:4px 6px 4px 14px;}
+  .cover-grid td.chk-indicator, table.invest-grid td.chk-indicator{text-align:center;font-weight:700;font-family:Arial,sans-serif;font-size:12.5px;}
   .chk-line{display:flex;align-items:center;gap:8px;}
   .chk-box{width:13px;height:13px;flex:none;cursor:pointer;}
 
@@ -389,10 +389,10 @@
 
     /* Keep cover table within 261mm printable height */
     table.cover-grid td, table.invest-grid td{
-      padding: 3.5px 7px !important;
+      padding: 4px 6px !important;
     }
     .cover-title-row td{
-      padding: 8px 12px !important;
+      padding: 8px 10px !important;
     }
 
     /* Prevent header bars and info rows from orphaning */
@@ -702,7 +702,11 @@
     return true;
   }
   function baseName(name){
-    return (name || 'report').replace(/\.[^.]+$/, '').trim() || 'report';
+    let base = (name || 'report').replace(/\.[^.]+$/, '').trim();
+    // Remove "Project report" (case-insensitive) along with any preceding dash/hyphen or trailing spaces
+    base = base.replace(/\s*[-–—_]?\s*project\s+report\b/gi, '').trim();
+    base = base.replace(/^project\s+report\s*[-–—_]?\s*/gi, '').trim();
+    return base || 'report';
   }
   function fileToDataUrl(file){
     return new Promise((resolve, reject)=>{
@@ -1280,19 +1284,26 @@
   }
   function coverRow(cells){ return el('tr', null, cells); }
   function coverSection(text, colspan){ return coverRow([ el('td', { class:'sec', colspan:String(colspan||4), contenteditable:'true', text: text }) ]); }
-  function coverChecklistRow(text){
+  function coverChecklistRow(text, defaultChecked){
     const cb = el('input', { type:'checkbox', class:'chk-box' });
+    cb.checked = !!defaultChecked;
     const line = el('label', { class:'chk-line' }, [ cb, el('span', { text: text }) ]);
-    const indicator = el('td', { class:'val chk-indicator', colspan:'1', text:'\u2717' });
+    const indicator = el('td', { class:'val chk-indicator', colspan:'1', text: defaultChecked ? '\u2713' : '\u2717' });
     cb.addEventListener('change', ()=>{ indicator.textContent = cb.checked ? '\u2713' : '\u2717'; });
     return el('tr', { class:'chk-row' }, [ el('td', { colspan:'3' }, [line]), indicator ]);
   }
 
   function renderCover(model){
     const table = el('table', { class:'cover-grid' });
+    table.appendChild(el('colgroup', null, [
+      el('col', { style:'width:30.5%;' }),
+      el('col', { style:'width:23.5%;' }),
+      el('col', { style:'width:22.5%;' }),
+      el('col', { style:'width:23.5%;' })
+    ]));
 
     table.appendChild(el('tr', { class:'cover-title-row' }, [
-      el('td', { class:'small', style:'width:220px;', contenteditable:'true', text:'PS/QMM8-NaP' }),
+      el('td', { class:'small', style:'width:30.5%;', contenteditable:'true', text:'PS/QMM8-NaP' }),
       el('td', { class:'big', colspan:'3', contenteditable:'true', text:'Material analysis report' })
     ]));
 
@@ -1329,9 +1340,10 @@
     table.appendChild(coverRow([ el('td',{class:'lbl',contenteditable:'true',text:'1) Task'}), el('td',{class:'val',colspan:'3',contenteditable:'true',text:': Material analysis and dimensional measurement of particles.'}) ]));
 
     table.appendChild(coverSection('2) Performed tests'));
-    ['Scanning Electron Microscope','EDAX - Analysis','Optical Microscope','Hardness measurement'].forEach((t,i)=>{
-      table.appendChild(coverChecklistRow((i+1)+'. '+t));
-    });
+    table.appendChild(coverChecklistRow('1. Scanning Electron Microscope', true));
+    table.appendChild(coverChecklistRow('2. EDAX - Analysis', true));
+    table.appendChild(coverChecklistRow('3. Optical Microscope', false));
+    table.appendChild(coverChecklistRow('4. Hardness measurement', false));
 
     table.appendChild(coverSection('3) Sample preparation for SEM and EDAX:'));
     table.appendChild(coverRow([ el('td',{class:'val',colspan:'4',contenteditable:'true',text:'Particles placed on carbon tape stub.'}) ]));
@@ -1343,7 +1355,7 @@
     table.appendChild(coverRow([ el('td',{class:'val',colspan:'4',contenteditable:'true',text:'EDAX Unit was calibrated with cobalt reference standard. EDAX analysis was performed under similar conditions with the following SEM/EDAX parameters.'}) ]));
     table.appendChild(coverRow([...coverPair('EHT', '20KV'), ...coverPair('WD', '8.5mm')]));
     table.appendChild(coverRow([...coverPair('Spot size', ''), ...coverPair('Signal', 'SE/BSD')]));
-    table.appendChild(coverRow([...coverPair('Dead time', '30-40%'), ...coverPair('Live time', "50'")]));
+    table.appendChild(coverRow([...coverPair('Dead time', '30-40%'), ...coverPair('Live time', '55')]));
 
     table.appendChild(coverSection('6) Sample details'));
     [['Requisition Dept.',''], ['Requisition dept complaint No.',''], ['External Customer',''],
@@ -1382,10 +1394,16 @@
 
   function renderInvestigationCover1(model){
     const table = el('table', { class:'invest-grid' });
+    table.appendChild(el('colgroup', null, [
+      el('col', { style:'width:30.5%;' }),
+      el('col', { style:'width:23.5%;' }),
+      el('col', { style:'width:22.5%;' }),
+      el('col', { style:'width:23.5%;' })
+    ]));
 
     // Row 00: Title row
     table.appendChild(el('tr', { class:'cover-title-row' }, [
-      el('td', { class:'small', style:'width:200px;', contenteditable:'true', text:'RBIN/NaP-QMM8' }),
+      el('td', { class:'small', style:'width:30.5%;', contenteditable:'true', text:'RBIN/NaP-QMM8' }),
       el('td', { class:'big', colspan:'3', contenteditable:'true', text:'SEM  analysis report' })
     ]));
 
@@ -1499,7 +1517,7 @@
     table.appendChild(coverRow([
       el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'Signal: SE/BSD' }),
       el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'Dead time :30-40 %' }),
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:"Live time : 50'" }),
+      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:"Live time : 55" }),
       el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'' })
     ]));
 
@@ -1543,10 +1561,14 @@
 
   function renderInvestigationCover2(model){
     const table = el('table', { class:'invest-grid' });
+    table.appendChild(el('colgroup', null, [
+      el('col', { style:'width:50%;' }),
+      el('col', { style:'width:50%;' })
+    ]));
 
     // Row 00: Title row
     table.appendChild(el('tr', { class:'cover-title-row' }, [
-      el('td', { class:'small', style:'width:200px;', contenteditable:'true', text:'PS/QMM8-NaP' }),
+      el('td', { class:'small', style:'width:50%;', contenteditable:'true', text:'PS/QMM8-NaP' }),
       el('td', { class:'big', colspan:'2', contenteditable:'true', text:'SEM  analysis report' })
     ]));
 
@@ -2100,15 +2122,15 @@
         }
       }
       table { border-collapse: collapse; }
-      .cover-grid, table.invest-grid { width: 100%; border-collapse: collapse; font-size: 13px; }
-      .cover-grid td, table.invest-grid td { border: 1px solid #97a0bd; padding: 4px 8px; vertical-align: top; }
-      .cover-title-row td { background: #000080; color: #fff; font-weight: 700; border: 1px solid #000080; padding: 10px 14px; }
-      .cover-title-row td.big { font-size: 17px; text-align: center; }
-      .cover-title-row td.small { font-size: 14px; }
-      .cover-grid .lbl, table.invest-grid .lbl { color: #222; background: #f4f5fa; font-weight: 600; width: 220px; text-align: left; }
+      .cover-grid, table.invest-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
+      .cover-grid td, table.invest-grid td { border: 1px solid #97a0bd; padding: 4px 6px; vertical-align: top; box-sizing: border-box; }
+      .cover-title-row td { background: #000080; color: #fff; font-weight: 700; border: 1px solid #000080; padding: 8px 10px; }
+      .cover-title-row td.big { font-size: 16px; text-align: center; }
+      .cover-title-row td.small { font-size: 13px; }
+      .cover-grid .lbl, table.invest-grid .lbl { color: #222; background: #f4f5fa; font-weight: 600; text-align: left; }
       .cover-grid .sec, table.invest-grid .sec { background: #e7e9f3; font-weight: 700; }
       .cover-grid .val, table.invest-grid .val { min-width: 120px; background: #ffffff; }
-      .chk-row td { padding: 4px 8px 4px 18px; }
+      .chk-row td { padding: 4px 6px 4px 14px; }
       .chk-line { display: flex; align-items: center; gap: 8px; }
       .cover-grid td.chk-indicator, table.invest-grid td.chk-indicator { text-align: center; font-weight: 700; padding-left: 8px; font-family: Arial, sans-serif; }
       .invest-notes-box { font-size: 13px; line-height: 1.5; font-family: "Times New Roman", Georgia, serif; padding: 4px 2px; }
@@ -2197,13 +2219,12 @@ ${bodyEl.innerHTML}
     // .sheet inside Word must fill width without double-padding:
     apply('.sheet', 'background:#ffffff;width:100%;margin:0;padding:0;font-family:"Times New Roman",Georgia,serif;');
 
-    apply('table.cover-grid', 'width:100%;border-collapse:collapse;font-size:12px;font-family:"Times New Roman",Georgia,serif;mso-table-layout-alt:fixed;');
-    apply('table.cover-grid, table.invest-grid', 'width:100%;border-collapse:collapse;font-size:12.5px;font-family:"Times New Roman",Georgia,serif;mso-table-layout-alt:fixed;');
-    apply('table.cover-grid td, table.invest-grid td', 'border:1px solid #97a0bd;padding:4px 7px;vertical-align:top;');
-    apply('.cover-title-row td', 'background:#000080;color:#ffffff;font-weight:bold;border:1px solid #000080;padding:9px 12px;');
+    apply('table.cover-grid, table.invest-grid', 'width:100%;border-collapse:collapse;font-size:12.5px;font-family:"Times New Roman",Georgia,serif;table-layout:fixed;mso-table-layout-alt:fixed;');
+    apply('table.cover-grid td, table.invest-grid td', 'border:1px solid #97a0bd;padding:4px 6px;vertical-align:top;');
+    apply('.cover-title-row td', 'background:#000080;color:#ffffff;font-weight:bold;border:1px solid #000080;padding:8px 10px;');
     apply('.cover-title-row td.big', 'font-size:16px;text-align:center;');
     apply('.cover-title-row td.small', 'font-size:13px;');
-    apply('table.cover-grid td.lbl, table.invest-grid td.lbl', 'background:#f4f5fa;font-weight:bold;width:200px;text-align:left;');
+    apply('table.cover-grid td.lbl, table.invest-grid td.lbl', 'background:#f4f5fa;font-weight:bold;text-align:left;');
     apply('table.cover-grid td.sec, table.invest-grid td.sec', 'background:#e7e9f3;font-weight:bold;');
     apply('table.cover-grid td.chk-indicator, table.invest-grid td.chk-indicator', 'text-align:center;font-weight:bold;font-family:Arial,sans-serif;font-size:12.5px;');
     apply('.invest-notes-box', 'font-size:12.5px;line-height:1.45;font-family:"Times New Roman",Georgia,serif;padding:4px 2px;');
@@ -2392,6 +2413,22 @@ ${bodyEl.innerHTML}
         } else {
           cg.innerHTML = '<col style="width:100%;" width="100%">';
         }
+        tbl.insertBefore(cg, tbl.firstChild);
+      }
+    });
+
+    $all('table.cover-grid, #investigationCoverSheet1 table.invest-grid', root).forEach(tbl => {
+      if (!tbl.querySelector('colgroup')){
+        const cg = document.createElement('colgroup');
+        cg.innerHTML = '<col style="width:30.5%;" width="30.5%"><col style="width:23.5%;" width="23.5%"><col style="width:22.5%;" width="22.5%"><col style="width:23.5%;" width="23.5%">';
+        tbl.insertBefore(cg, tbl.firstChild);
+      }
+    });
+
+    $all('#investigationCoverSheet2 table.invest-grid', root).forEach(tbl => {
+      if (!tbl.querySelector('colgroup')){
+        const cg = document.createElement('colgroup');
+        cg.innerHTML = '<col style="width:50%;" width="50%"><col style="width:50%;" width="50%">';
         tbl.insertBefore(cg, tbl.firstChild);
       }
     });
