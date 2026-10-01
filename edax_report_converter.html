@@ -1004,10 +1004,7 @@
     return dd + '.' + mm + '.' + d.getFullYear();
   }
   function nowStamp(){
-    const d = new Date();
-    let h = d.getHours(); const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12; if (h===0) h = 12;
-    const mi = String(d.getMinutes()).padStart(2,'0');
-    return todayStr() + ' ' + h + ':' + mi + ' ' + ampm;
+    return todayStr();
   }
 
   function downloadBlob(blob, filename){
