@@ -6,44 +6,6 @@
 <title>EDX Report Converter</title>
 <style>
   :root{
-    --sheet-pad-v: 18mm;
-    --sheet-pad-h: 15mm;
-    --sheet-pad-v-print: 14mm;
-    --sheet-pad-h-print: 15mm;
-    --cover-pad-v: 4px;
-    --cover-pad-h: 6px;
-    --cover-font-size: 12.5px;
-    --cover-border: #97a0bd;
-    --title-bg: #000080;
-    --title-color: #ffffff;
-    --title-size-big: 16px;
-    --title-size-small: 13px;
-    --title-pad-v: 8px;
-    --title-pad-h: 10px;
-    --site-head-pad-v: 12px;
-    --site-head-pad-h: 18px;
-    --site-head-size: 16px;
-    --info-pad-v: 9px;
-    --info-pad-h: 12px;
-    --info-font-size: 12.5px;
-    --info-border: #444;
-    --info-min-h: 70px;
-    --col-l-width: 53%;
-    --col-r-width: 47%;
-    --col-gap: 8px;
-    --comm-pad-v: 6px;
-    --comm-pad-h: 10px;
-    --comm-font-size: 12.5px;
-    --comm-lbl-width: 150px;
-    --comm-border: #444;
-    --quant-font-size: 13px;
-    --quant-pad-v: 4px;
-    --quant-pad-h: 10px;
-    --quant-hdr-border: #111;
-    --body-font: "Times New Roman", Georgia, serif;
-    --body-font-size: 13px;
-    --body-line-height: 1.5;
-
     --navy:#000080;
     --navy-2:#0d1f5c;
     --brass:#a9782f;
@@ -228,7 +190,7 @@
   .edit-tip{font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;}
   .edit-tip .dot{width:7px;height:7px;border-radius:50%;background:var(--brass);display:inline-block;}
 
-  #reportRoot{ font-family:var(--body-font); color:#111; font-size:var(--body-font-size); line-height:var(--body-line-height); }
+  #reportRoot{ font-family:"Times New Roman", Georgia, serif; color:#111; }
 
   [contenteditable="true"]{outline:none;border-radius:2px;}
   [contenteditable="true"]:hover{background-color:rgba(169,120,47,.08);}
@@ -244,16 +206,16 @@
     margin:0 auto 26px;
     box-shadow:0 1px 4px rgba(20,25,50,.10), 0 8px 22px rgba(20,25,50,.08);
     border-radius:3px;
-    padding:var(--sheet-pad-v) var(--sheet-pad-h);
+    padding:18mm 15mm;
     scroll-margin-top:130px;
   }
   .sheet + .sheet{margin-top:26px;}
 
-  .cover-grid, table.invest-grid{width:100%;border-collapse:collapse;table-layout:fixed;font-size:var(--cover-font-size);margin-bottom:0;}
-  .cover-grid td, table.invest-grid td{border:1px solid var(--cover-border);padding:var(--cover-pad-v) var(--cover-pad-h);vertical-align:top;box-sizing:border-box;}
-  .cover-title-row td{background:var(--title-bg) !important;color:var(--title-color) !important;font-weight:700;border:1px solid var(--title-bg) !important;padding:var(--title-pad-v) var(--title-pad-h);}
-  .cover-title-row td.big{font-size:var(--title-size-big);text-align:center;}
-  .cover-title-row td.small{font-size:var(--title-size-small);}
+  .cover-grid, table.invest-grid{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12.5px;margin-bottom:0;}
+  .cover-grid td, table.invest-grid td{border:1px solid #97a0bd;padding:4px 6px;vertical-align:top;box-sizing:border-box;}
+  .cover-title-row td{background:var(--navy) !important;color:#fff !important;font-weight:700;border:1px solid var(--navy) !important;padding:8px 10px;}
+  .cover-title-row td.big{font-size:16px;text-align:center;}
+  .cover-title-row td.small{font-size:13px;}
   .cover-title-row td[contenteditable="true"]:hover{background:#000066 !important;color:#fff !important;}
   .cover-title-row td[contenteditable="true"]:focus{background:#000080 !important;color:#fff !important;box-shadow:inset 0 0 0 2px #ffdd88 !important;outline:none !important;}
   .cover-grid .lbl, table.invest-grid .lbl{color:#222;background:#f4f5fa;font-weight:600;text-align:left;white-space:normal;}
@@ -284,8 +246,8 @@
      built as real <table> layouts (see twoColTable in JS) since Word's
      HTML engine does not support CSS grid or flexbox at all. */
   table.twocol{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;margin-bottom:14px;}
-  table.twocol td.twocol-l{width:var(--col-l-width);vertical-align:top;padding:0 var(--col-gap) 0 0;}
-  table.twocol td.twocol-r{width:var(--col-r-width);vertical-align:top;padding:0 0 0 var(--col-gap);}
+  table.twocol td.twocol-l{width:53%;vertical-align:top;padding:0 8px 0 0;}
+  table.twocol td.twocol-r{width:47%;vertical-align:top;padding:0 0 0 8px;}
   table.content-row td.twocol-l,table.content-row td.twocol-r{vertical-align:top;}
 
   #reportRoot.hide-comments table.content-row td.twocol-r{display:none;}
@@ -310,14 +272,14 @@
   }
 
   table.site-header-bar{width:100%;border-collapse:collapse;background:var(--navy) !important;margin:0 0 14px;}
-  table.site-header-bar td{color:var(--title-color) !important;padding:var(--site-head-pad-v) var(--site-head-pad-h);vertical-align:baseline;}
+  table.site-header-bar td{color:#fff !important;padding:12px 18px;vertical-align:baseline;}
   table.site-header-bar td.bar-ts{text-align:right;white-space:nowrap;}
-  .site-header-bar .proj-title{font-size:var(--site-head-size);font-weight:600;}
+  .site-header-bar .proj-title{font-size:16px;font-weight:600;}
   .site-header-bar .ts{font-size:9.5px;color:#cfd4ef;white-space:nowrap;}
   .site-header-bar [contenteditable="true"]:hover{background:rgba(255,255,255,0.12) !important;color:#fff !important;}
   .site-header-bar [contenteditable="true"]:focus{background:rgba(255,255,255,0.2) !important;color:#fff !important;box-shadow:inset 0 0 0 1px #ffdd88 !important;outline:none !important;}
 
-  .info-box{border:1px solid var(--info-border);padding:var(--info-pad-v) var(--info-pad-h);font-size:var(--info-font-size);line-height:1.55;min-height:var(--info-min-h);}
+  .info-box{border:1px solid #444;padding:9px 12px;font-size:12.5px;line-height:1.55;min-height:70px;}
   .info-box .ln{white-space:pre-wrap;}
   .info-box .ln b{font-weight:600;}
 
@@ -333,12 +295,12 @@
 
   .quant-section-full{width:100%;margin-top:10px;}
   .proc-note{font-size:13px;color:#222;font-weight:600;margin:10px 0 4px;}
-  table.quant-table{width:100%;border-collapse:collapse;font-size:var(--quant-font-size);margin:2px 0 4px;}
-  table.quant-table th{border-top:1.4px solid var(--quant-hdr-border);border-bottom:1px solid var(--quant-hdr-border);text-align:left;font-weight:700;padding:var(--quant-pad-v) var(--quant-pad-h) var(--quant-pad-v) 0;}
-  table.quant-table td{padding:var(--quant-pad-v) var(--quant-pad-h) var(--quant-pad-v) 0;text-align:left;white-space:nowrap;}
+  table.quant-table{width:100%;border-collapse:collapse;font-size:13px;margin:2px 0 4px;}
+  table.quant-table th{border-top:1.4px solid #111;border-bottom:1px solid #111;text-align:left;font-weight:700;padding:5px 10px 5px 0;}
+  table.quant-table td{padding:4px 10px 4px 0;text-align:left;white-space:nowrap;}
   table.quant-table tr.spacer td{padding:4px 0;border:none;}
-  table.quant-table tr.stat-row:first-of-type td{border-top:1px solid var(--quant-hdr-border);}
-  table.quant-table tr.last-row td{border-bottom:1.4px solid var(--quant-hdr-border);}
+  table.quant-table tr.stat-row:first-of-type td{border-top:1px solid #111;}
+  table.quant-table tr.last-row td{border-bottom:1.4px solid #111;}
   .weight-note{font-size:12px;color:#333;margin:3px 0 16px;}
   .no-quant-msg{font-size:11.5px;color:var(--ink-soft);font-style:italic;font-family:"Segoe UI",sans-serif;margin:6px 0 14px;}
 
@@ -347,11 +309,11 @@
   .site-select-row button:hover{background:#eef1fb;}
   .site-select-row .lbl{font-size:10.5px;color:var(--ink-soft);}
 
-  .comment-box{border:1px solid var(--comm-border);transition:opacity .2s ease;}
+  .comment-box{border:1px solid #444;transition:opacity .2s ease;}
   .comment-box.excluded{border-style:dashed;opacity:.55;}
   .comment-box.excluded table.comment-table{display:none;}
   .comment-box.excluded .cb-title{border-bottom:none;}
-  .comment-box .cb-title{padding:8px 12px;font-size:var(--comm-font-size);font-weight:600;border-bottom:1px solid var(--comm-border);display:flex;justify-content:space-between;align-items:center;}
+  .comment-box .cb-title{padding:8px 12px;font-size:12.5px;font-weight:600;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center;}
   .cb-toggle-label{display:inline-flex;align-items:center;gap:7px;cursor:pointer;}
   .comment-box .cb-title .copy-btn{
     font-family:"Segoe UI",sans-serif;font-size:10px;border:1px solid var(--line);background:#fbfbfd;
@@ -359,9 +321,9 @@
   }
   .comment-box .cb-title .copy-btn:hover{background:#eef1fb;}
   .comment-box.excluded .cb-title .copy-btn{display:none;}
-  table.comment-table{width:100%;border-collapse:collapse;font-size:var(--comm-font-size);}
-  table.comment-table td{border:1px solid var(--comm-border);padding:var(--comm-pad-v) var(--comm-pad-h);vertical-align:top;}
-  table.comment-table td.c-label{width:var(--comm-lbl-width);background:#fafafa;}
+  table.comment-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.comment-table td{border:1px solid #444;padding:6px 10px;vertical-align:top;}
+  table.comment-table td.c-label{width:150px;background:#fafafa;}
   table.comment-table td.c-value{min-width:120px;}
   .photo-mini-grid{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
   .photo-mini{display:flex;align-items:center;gap:7px;border:1px solid var(--line-soft);border-radius:4px;padding:3px 6px;font-family:"Segoe UI",sans-serif;font-size:10.5px;}
@@ -442,7 +404,7 @@
       width: 210mm !important;
       min-height: 297mm !important;
       box-sizing: border-box !important;
-      padding: var(--sheet-pad-v-print) var(--sheet-pad-h-print) !important;
+      padding: 14mm 15mm !important;
       page-break-after: always !important;
       break-after: page !important;
       page-break-inside: avoid !important;
@@ -606,13 +568,6 @@
         <ul class="log-list" id="logList"></ul>
       </div>
       <div class="panel">
-        <h3 style="cursor:pointer;" onclick="document.getElementById('tmplEditBody').style.display = document.getElementById('tmplEditBody').style.display === 'none' ? 'block' : 'none'">Template Editor &#9660;</h3>
-        <div id="tmplEditBody" style="display:none;">
-          <button class="btn small ghost" type="button" id="resetTemplateAllBtn" style="width:100%;margin-bottom:10px;">Reset All to Defaults</button>
-          <div id="templateControls" style="font-size:11.5px;max-height:400px;overflow-y:auto;padding-right:6px;"></div>
-        </div>
-      </div>
-      <div class="panel">
         <h3>Report Options</h3>
         <div class="opt-field" style="margin-bottom:12px;">
           <label>Report Format</label>
@@ -704,288 +659,6 @@
 <script>
 (function(){
   "use strict";
-
-  const TEMPLATE_VARS_DEF = {
-    sheetPaddingTopMm: 18,
-    sheetPaddingBottomMm: 18,
-    sheetPaddingLeftMm: 15,
-    sheetPaddingRightMm: 15,
-    sheetPaddingTopMmPrint: 14,
-    sheetPaddingBottomMmPrint: 14,
-    sheetPaddingLeftMmPrint: 15,
-    sheetPaddingRightMmPrint: 15,
-    coverCellPaddingVPx: 4,
-    coverCellPaddingHPx: 6,
-    coverFontSizePx: 12.5,
-    coverBorderColor: '#97a0bd',
-    titleRowBg: '#000080',
-    titleRowColor: '#ffffff',
-    titleRowFontSizeBigPx: 16,
-    titleRowFontSizeSmallPx: 13,
-    titleRowPaddingVPx: 8,
-    titleRowPaddingHPx: 10,
-    siteHeaderPaddingVPx: 12,
-    siteHeaderPaddingHPx: 18,
-    siteHeaderFontSizePx: 16,
-    infoBoxPaddingVPx: 9,
-    infoBoxPaddingHPx: 12,
-    infoBoxFontSizePx: 12.5,
-    infoBoxBorderColor: '#444444',
-    infoBoxMinHeightPx: 70,
-    leftColWidthPct: 53,
-    colGapPx: 8,
-    commentCellPaddingVPx: 6,
-    commentCellPaddingHPx: 10,
-    commentFontSizePx: 12.5,
-    commentLabelWidthPx: 150,
-    commentBorderColor: '#444444',
-    quantFontSizePx: 13,
-    quantRowPaddingVPx: 4,
-    quantRowPaddingHPx: 10,
-    quantHeaderBorderColor: '#111111',
-    bodyFontFamily: 'Times New Roman',
-    bodyFontSizePx: 13,
-    bodyLineHeight: 1.5
-  };
-  
-  let TEMPLATE_VARS = {...TEMPLATE_VARS_DEF};
-
-  function applyTemplateCss(){
-    const root = document.documentElement;
-    root.style.setProperty('--sheet-pad-v', TEMPLATE_VARS.sheetPaddingTopMm + 'mm'); // we used var(--sheet-pad-v) var(--sheet-pad-h) in CSS for now
-    // Actually, let's just create a <style> tag to override exactly what is needed so we don't depend on var() for everything if they don't map 1-to-1.
-    // The previous Python script already added var() mapped to some variables. We'll update the CSS Custom Properties on :root.
-    root.style.setProperty('--sheet-pad-v', TEMPLATE_VARS.sheetPaddingTopMm + 'mm ' + TEMPLATE_VARS.sheetPaddingBottomMm + 'mm');
-    // wait padding shorthand with 2 values is vertical horizontal. If I set --sheet-pad-v to '18mm', it's just vertical.
-    // Let's generate a full style block to be 100% safe.
-    let style = document.getElementById('template-vars-css');
-    if(!style){
-      style = document.createElement('style');
-      style.id = 'template-vars-css';
-      document.head.appendChild(style);
-    }
-    
-    style.innerHTML = `
-      :root {
-        --sheet-pad-v: ${TEMPLATE_VARS.sheetPaddingTopMm}mm;
-        --sheet-pad-h: ${TEMPLATE_VARS.sheetPaddingLeftMm}mm;
-        --sheet-pad-v-print: ${TEMPLATE_VARS.sheetPaddingTopMmPrint}mm;
-        --sheet-pad-h-print: ${TEMPLATE_VARS.sheetPaddingLeftMmPrint}mm;
-        --cover-pad-v: ${TEMPLATE_VARS.coverCellPaddingVPx}px;
-        --cover-pad-h: ${TEMPLATE_VARS.coverCellPaddingHPx}px;
-        --cover-font-size: ${TEMPLATE_VARS.coverFontSizePx}px;
-        --cover-border: ${TEMPLATE_VARS.coverBorderColor};
-        --title-bg: ${TEMPLATE_VARS.titleRowBg};
-        --title-color: ${TEMPLATE_VARS.titleRowColor};
-        --title-size-big: ${TEMPLATE_VARS.titleRowFontSizeBigPx}px;
-        --title-size-small: ${TEMPLATE_VARS.titleRowFontSizeSmallPx}px;
-        --title-pad-v: ${TEMPLATE_VARS.titleRowPaddingVPx}px;
-        --title-pad-h: ${TEMPLATE_VARS.titleRowPaddingHPx}px;
-        --site-head-pad-v: ${TEMPLATE_VARS.siteHeaderPaddingVPx}px;
-        --site-head-pad-h: ${TEMPLATE_VARS.siteHeaderPaddingHPx}px;
-        --site-head-size: ${TEMPLATE_VARS.siteHeaderFontSizePx}px;
-        --info-pad-v: ${TEMPLATE_VARS.infoBoxPaddingVPx}px;
-        --info-pad-h: ${TEMPLATE_VARS.infoBoxPaddingHPx}px;
-        --info-font-size: ${TEMPLATE_VARS.infoBoxFontSizePx}px;
-        --info-border: ${TEMPLATE_VARS.infoBoxBorderColor};
-        --info-min-h: ${TEMPLATE_VARS.infoBoxMinHeightPx}px;
-        --col-l-width: ${TEMPLATE_VARS.leftColWidthPct}%;
-        --col-r-width: ${100 - TEMPLATE_VARS.leftColWidthPct}%;
-        --col-gap: ${TEMPLATE_VARS.colGapPx}px;
-        --comm-pad-v: ${TEMPLATE_VARS.commentCellPaddingVPx}px;
-        --comm-pad-h: ${TEMPLATE_VARS.commentCellPaddingHPx}px;
-        --comm-font-size: ${TEMPLATE_VARS.commentFontSizePx}px;
-        --comm-lbl-width: ${TEMPLATE_VARS.commentLabelWidthPx}px;
-        --comm-border: ${TEMPLATE_VARS.commentBorderColor};
-        --quant-font-size: ${TEMPLATE_VARS.quantFontSizePx}px;
-        --quant-pad-v: ${TEMPLATE_VARS.quantRowPaddingVPx}px;
-        --quant-pad-h: ${TEMPLATE_VARS.quantRowPaddingHPx}px;
-        --quant-hdr-border: ${TEMPLATE_VARS.quantHeaderBorderColor};
-        --body-font: ${TEMPLATE_VARS.bodyFontFamily === 'Times New Roman' ? '"Times New Roman", Georgia, serif' : (TEMPLATE_VARS.bodyFontFamily === 'Arial' ? 'Arial, sans-serif' : 'Calibri, sans-serif')};
-        --body-font-size: ${TEMPLATE_VARS.bodyFontSizePx}px;
-        --body-line-height: ${TEMPLATE_VARS.bodyLineHeight};
-      }
-      .sheet { padding: ${TEMPLATE_VARS.sheetPaddingTopMm}mm ${TEMPLATE_VARS.sheetPaddingRightMm}mm ${TEMPLATE_VARS.sheetPaddingBottomMm}mm ${TEMPLATE_VARS.sheetPaddingLeftMm}mm !important; }
-      @media print {
-        .sheet { padding: ${TEMPLATE_VARS.sheetPaddingTopMmPrint}mm ${TEMPLATE_VARS.sheetPaddingRightMmPrint}mm ${TEMPLATE_VARS.sheetPaddingBottomMmPrint}mm ${TEMPLATE_VARS.sheetPaddingLeftMmPrint}mm !important; }
-      }
-    `;
-  }
-
-  function buildTemplateEditor(){
-    const ctrls = document.getElementById('templateControls');
-    if(!ctrls) return;
-    
-    function createSection(title, fields){
-      const sec = document.createElement('div');
-      sec.style.marginBottom = '12px';
-      sec.style.border = '1px solid #ddd';
-      sec.style.borderRadius = '4px';
-      
-      const head = document.createElement('div');
-      head.textContent = title + ' ▼';
-      head.style.padding = '6px 8px';
-      head.style.backgroundColor = '#f4f5fa';
-      head.style.fontWeight = 'bold';
-      head.style.cursor = 'pointer';
-      head.onclick = () => {
-        body.style.display = body.style.display === 'none' ? 'block' : 'none';
-        head.textContent = title + (body.style.display === 'none' ? ' ▶' : ' ▼');
-      };
-      
-      const body = document.createElement('div');
-      body.style.padding = '8px';
-      
-      fields.forEach(f => {
-        const row = document.createElement('div');
-        row.style.marginBottom = '6px';
-        row.style.display = 'flex';
-        row.style.flexDirection = 'column';
-        
-        const labelRow = document.createElement('div');
-        labelRow.style.display = 'flex';
-        labelRow.style.justifyContent = 'space-between';
-        labelRow.style.alignItems = 'center';
-        
-        const lbl = document.createElement('span');
-        lbl.textContent = f.label;
-        lbl.style.fontWeight = '600';
-        
-        const valDisp = document.createElement('span');
-        valDisp.textContent = TEMPLATE_VARS[f.key];
-        valDisp.style.color = '#000080';
-        
-        labelRow.appendChild(lbl);
-        labelRow.appendChild(valDisp);
-        row.appendChild(labelRow);
-        
-        let inp;
-        if(f.type === 'color'){
-          inp = document.createElement('input');
-          inp.type = 'color';
-          inp.value = TEMPLATE_VARS[f.key];
-          inp.style.width = '100%';
-        } else if (f.type === 'select'){
-          inp = document.createElement('select');
-          f.options.forEach(o => {
-            const opt = document.createElement('option');
-            opt.value = o;
-            opt.textContent = o;
-            if(o === TEMPLATE_VARS[f.key]) opt.selected = true;
-            inp.appendChild(opt);
-          });
-          inp.style.width = '100%';
-        } else {
-          inp = document.createElement('input');
-          inp.type = 'range';
-          inp.min = f.min;
-          inp.max = f.max;
-          inp.step = f.step || 1;
-          inp.value = TEMPLATE_VARS[f.key];
-          inp.style.width = '100%';
-        }
-        
-        inp.addEventListener('input', (e) => {
-          let v = e.target.value;
-          if(f.type === 'number' || f.type === 'range') v = parseFloat(v);
-          TEMPLATE_VARS[f.key] = v;
-          if (f.type !== 'color' && f.type !== 'select') valDisp.textContent = v;
-          applyTemplateCss();
-        });
-        
-        const resetBtn = document.createElement('button');
-        resetBtn.textContent = 'Reset';
-        resetBtn.style.fontSize = '9px';
-        resetBtn.style.marginTop = '2px';
-        resetBtn.style.alignSelf = 'flex-start';
-        resetBtn.onclick = () => {
-          inp.value = TEMPLATE_VARS_DEF[f.key];
-          inp.dispatchEvent(new Event('input'));
-        };
-        
-        row.appendChild(inp);
-        row.appendChild(resetBtn);
-        body.appendChild(row);
-      });
-      
-      sec.appendChild(head);
-      sec.appendChild(body);
-      ctrls.appendChild(sec);
-    }
-    
-    createSection('Sheet Margins', [
-      {label: 'Top (mm)', key: 'sheetPaddingTopMm', type: 'range', min: 0, max: 50},
-      {label: 'Bottom (mm)', key: 'sheetPaddingBottomMm', type: 'range', min: 0, max: 50},
-      {label: 'Left (mm)', key: 'sheetPaddingLeftMm', type: 'range', min: 0, max: 50},
-      {label: 'Right (mm)', key: 'sheetPaddingRightMm', type: 'range', min: 0, max: 50},
-      {label: 'Print Top (mm)', key: 'sheetPaddingTopMmPrint', type: 'range', min: 0, max: 50},
-      {label: 'Print Bottom (mm)', key: 'sheetPaddingBottomMmPrint', type: 'range', min: 0, max: 50},
-      {label: 'Print Left (mm)', key: 'sheetPaddingLeftMmPrint', type: 'range', min: 0, max: 50},
-      {label: 'Print Right (mm)', key: 'sheetPaddingRightMmPrint', type: 'range', min: 0, max: 50},
-    ]);
-    createSection('Cover Table', [
-      {label: 'Cell Pad V (px)', key: 'coverCellPaddingVPx', type: 'range', min: 0, max: 20},
-      {label: 'Cell Pad H (px)', key: 'coverCellPaddingHPx', type: 'range', min: 0, max: 20},
-      {label: 'Font Size (px)', key: 'coverFontSizePx', type: 'range', min: 8, max: 24, step: 0.5},
-      {label: 'Border Color', key: 'coverBorderColor', type: 'color'}
-    ]);
-    createSection('Title Row', [
-      {label: 'Background', key: 'titleRowBg', type: 'color'},
-      {label: 'Text Color', key: 'titleRowColor', type: 'color'},
-      {label: 'Font Big (px)', key: 'titleRowFontSizeBigPx', type: 'range', min: 10, max: 30},
-      {label: 'Font Small (px)', key: 'titleRowFontSizeSmallPx', type: 'range', min: 8, max: 24},
-      {label: 'Pad V (px)', key: 'titleRowPaddingVPx', type: 'range', min: 0, max: 30},
-      {label: 'Pad H (px)', key: 'titleRowPaddingHPx', type: 'range', min: 0, max: 30}
-    ]);
-    createSection('Site Header', [
-      {label: 'Pad V (px)', key: 'siteHeaderPaddingVPx', type: 'range', min: 0, max: 30},
-      {label: 'Pad H (px)', key: 'siteHeaderPaddingHPx', type: 'range', min: 0, max: 30},
-      {label: 'Title Size (px)', key: 'siteHeaderFontSizePx', type: 'range', min: 10, max: 30}
-    ]);
-    createSection('Info Box', [
-      {label: 'Pad V (px)', key: 'infoBoxPaddingVPx', type: 'range', min: 0, max: 20},
-      {label: 'Pad H (px)', key: 'infoBoxPaddingHPx', type: 'range', min: 0, max: 20},
-      {label: 'Font Size (px)', key: 'infoBoxFontSizePx', type: 'range', min: 8, max: 20, step: 0.5},
-      {label: 'Border Color', key: 'infoBoxBorderColor', type: 'color'},
-      {label: 'Min Height (px)', key: 'infoBoxMinHeightPx', type: 'range', min: 20, max: 150}
-    ]);
-    createSection('Layout', [
-      {label: 'Left Col Width %', key: 'leftColWidthPct', type: 'range', min: 20, max: 80},
-      {label: 'Col Gap (px)', key: 'colGapPx', type: 'range', min: 0, max: 40}
-    ]);
-    createSection('Comment Table', [
-      {label: 'Pad V (px)', key: 'commentCellPaddingVPx', type: 'range', min: 0, max: 20},
-      {label: 'Pad H (px)', key: 'commentCellPaddingHPx', type: 'range', min: 0, max: 20},
-      {label: 'Font Size (px)', key: 'commentFontSizePx', type: 'range', min: 8, max: 20, step: 0.5},
-      {label: 'Label Width (px)', key: 'commentLabelWidthPx', type: 'range', min: 50, max: 300},
-      {label: 'Border Color', key: 'commentBorderColor', type: 'color'}
-    ]);
-    createSection('Quant Table', [
-      {label: 'Font Size (px)', key: 'quantFontSizePx', type: 'range', min: 8, max: 20, step: 0.5},
-      {label: 'Pad V (px)', key: 'quantRowPaddingVPx', type: 'range', min: 0, max: 20},
-      {label: 'Pad H (px)', key: 'quantRowPaddingHPx', type: 'range', min: 0, max: 20},
-      {label: 'Header Border', key: 'quantHeaderBorderColor', type: 'color'}
-    ]);
-    createSection('Body Font', [
-      {label: 'Family', key: 'bodyFontFamily', type: 'select', options: ['Times New Roman', 'Arial', 'Calibri']},
-      {label: 'Size (px)', key: 'bodyFontSizePx', type: 'range', min: 8, max: 24, step: 0.5},
-      {label: 'Line Height', key: 'bodyLineHeight', type: 'range', min: 1, max: 3, step: 0.1}
-    ]);
-    
-    document.getElementById('resetTemplateAllBtn').onclick = () => {
-      TEMPLATE_VARS = {...TEMPLATE_VARS_DEF};
-      ctrls.innerHTML = '';
-      buildTemplateEditor();
-      applyTemplateCss();
-    };
-  }
-
-  // Call on load
-  document.addEventListener('DOMContentLoaded', () => {
-    buildTemplateEditor();
-    applyTemplateCss();
-  });
-
 
   /* ============================================================
      0. Small utilities
@@ -2451,19 +2124,17 @@
     return clone;
   }
 
-  
   function getExportCss(){
-    const bFont = TEMPLATE_VARS.bodyFontFamily === 'Times New Roman' ? '"Times New Roman", Georgia, serif' : (TEMPLATE_VARS.bodyFontFamily === 'Arial' ? 'Arial, sans-serif' : 'Calibri, sans-serif');
     return `
       @page {
         size: A4 portrait;
         margin: 0;
       }
       body {
-        font-family: ${bFont};
+        font-family: "Times New Roman", Georgia, serif;
         color: #111;
-        font-size: ${TEMPLATE_VARS.bodyFontSizePx}px;
-        line-height: ${TEMPLATE_VARS.bodyLineHeight};
+        font-size: 13px;
+        line-height: 1.5;
         margin: 0;
         padding: 0;
         background: #eee;
@@ -2477,7 +2148,7 @@
         max-width: 100%;
         box-sizing: border-box;
         margin: 0 auto 26px;
-        padding: ${TEMPLATE_VARS.sheetPaddingTopMm}mm ${TEMPLATE_VARS.sheetPaddingRightMm}mm ${TEMPLATE_VARS.sheetPaddingBottomMm}mm ${TEMPLATE_VARS.sheetPaddingLeftMm}mm;
+        padding: 14mm 15mm;
         box-shadow: 0 1px 4px rgba(20,25,50,.10), 0 8px 22px rgba(20,25,50,.08);
       }
       @media print {
@@ -2487,7 +2158,7 @@
           margin: 0 auto;
           width: 210mm;
           min-height: 297mm;
-          padding: ${TEMPLATE_VARS.sheetPaddingTopMmPrint}mm ${TEMPLATE_VARS.sheetPaddingRightMmPrint}mm ${TEMPLATE_VARS.sheetPaddingBottomMmPrint}mm ${TEMPLATE_VARS.sheetPaddingLeftMmPrint}mm;
+          padding: 14mm 15mm;
           page-break-after: always;
           break-after: page;
         }
@@ -2507,7 +2178,7 @@
           page-break-after: avoid;
           margin-bottom: 8px;
         }
-        .info-box { min-height: ${TEMPLATE_VARS.infoBoxMinHeightPx}px; padding: ${TEMPLATE_VARS.infoBoxPaddingVPx}px ${TEMPLATE_VARS.infoBoxPaddingHPx}px; border: 1px solid ${TEMPLATE_VARS.infoBoxBorderColor}; }
+        .info-box { min-height: 56px; padding: 6px 10px; }
         .img-slot, .img-col img {
           break-inside: avoid;
           page-break-inside: avoid;
@@ -2549,46 +2220,46 @@
         }
       }
       table { border-collapse: collapse; }
-      .cover-grid, table.invest-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: ${TEMPLATE_VARS.coverFontSizePx}px; }
-      .cover-grid td, table.invest-grid td { border: 1px solid ${TEMPLATE_VARS.coverBorderColor}; padding: ${TEMPLATE_VARS.coverCellPaddingVPx}px ${TEMPLATE_VARS.coverCellPaddingHPx}px; vertical-align: top; box-sizing: border-box; }
-      .cover-title-row td { background: ${TEMPLATE_VARS.titleRowBg}; color: ${TEMPLATE_VARS.titleRowColor}; font-weight: 700; border: 1px solid ${TEMPLATE_VARS.titleRowBg}; padding: ${TEMPLATE_VARS.titleRowPaddingVPx}px ${TEMPLATE_VARS.titleRowPaddingHPx}px; }
-      .cover-title-row td.big { font-size: ${TEMPLATE_VARS.titleRowFontSizeBigPx}px; text-align: center; }
-      .cover-title-row td.small { font-size: ${TEMPLATE_VARS.titleRowFontSizeSmallPx}px; }
+      .cover-grid, table.invest-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
+      .cover-grid td, table.invest-grid td { border: 1px solid #97a0bd; padding: 4px 6px; vertical-align: top; box-sizing: border-box; }
+      .cover-title-row td { background: #000080; color: #fff; font-weight: 700; border: 1px solid #000080; padding: 8px 10px; }
+      .cover-title-row td.big { font-size: 16px; text-align: center; }
+      .cover-title-row td.small { font-size: 13px; }
       .cover-grid .lbl, table.invest-grid .lbl { color: #222; background: #f4f5fa; font-weight: 600; text-align: left; }
       .cover-grid .sec, table.invest-grid .sec { background: #e7e9f3; font-weight: 700; }
       .cover-grid .val, table.invest-grid .val { min-width: 120px; background: #ffffff; }
       .chk-row td { padding: 4px 6px 4px 14px; }
       .chk-line { display: flex; align-items: center; gap: 8px; }
       .cover-grid td.chk-indicator, table.invest-grid td.chk-indicator { text-align: center; font-weight: 700; padding-left: 8px; font-family: Arial, sans-serif; }
-      .invest-notes-box { font-size: 13px; line-height: 1.5; font-family: ${bFont}; padding: 4px 2px; }
+      .invest-notes-box { font-size: 13px; line-height: 1.5; font-family: "Times New Roman", Georgia, serif; padding: 4px 2px; }
       table.twocol { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; margin-bottom: 12px; }
-      table.twocol td.twocol-l { width: ${TEMPLATE_VARS.leftColWidthPct}%; vertical-align: top; padding: 0 ${TEMPLATE_VARS.colGapPx}px 0 0; }
-      table.twocol td.twocol-r { width: ${100 - TEMPLATE_VARS.leftColWidthPct}%; vertical-align: top; padding: 0 0 0 ${TEMPLATE_VARS.colGapPx}px; }
+      table.twocol td.twocol-l { width: 53%; vertical-align: top; padding: 0 8px 0 0; }
+      table.twocol td.twocol-r { width: 47%; vertical-align: top; padding: 0 0 0 8px; }
       table.twocol td.twocol-l:only-child, table.content-row.no-comments td.twocol-l { width: 100% !important; padding-right: 0 !important; text-align: center !important; }
       table.twocol td.twocol-l:only-child .img-col img, table.content-row.no-comments .img-col img { max-height: 260px !important; width: auto !important; max-width: 100% !important; display: block !important; margin: 0 auto 4px auto !important; object-fit: contain !important; }
       table.twocol td.twocol-l:only-child .img-col .img-slot:only-child img, table.content-row.no-comments .img-col .img-slot:only-child img { max-height: 380px !important; }
-      table.site-header-bar { width: 100%; border-collapse: collapse; background: ${TEMPLATE_VARS.titleRowBg}; margin: 0 0 12px; }
-      table.site-header-bar td { color: ${TEMPLATE_VARS.titleRowColor}; padding: ${TEMPLATE_VARS.siteHeaderPaddingVPx}px ${TEMPLATE_VARS.siteHeaderPaddingHPx}px; vertical-align: baseline; }
+      table.site-header-bar { width: 100%; border-collapse: collapse; background: #000080; margin: 0 0 12px; }
+      table.site-header-bar td { color: #fff; padding: 10px 16px; vertical-align: baseline; }
       table.site-header-bar td.bar-ts { text-align: right; white-space: nowrap; }
-      .site-header-bar .proj-title { font-size: ${TEMPLATE_VARS.siteHeaderFontSizePx}px; font-weight: 600; }
+      .site-header-bar .proj-title { font-size: 16px; font-weight: 600; }
       .site-header-bar .ts { font-size: 9.5px; color: #cfd4ef; white-space: nowrap; }
-      .info-box { border: 1px solid ${TEMPLATE_VARS.infoBoxBorderColor}; padding: ${TEMPLATE_VARS.infoBoxPaddingVPx}px ${TEMPLATE_VARS.infoBoxPaddingHPx}px; font-size: ${TEMPLATE_VARS.infoBoxFontSizePx}px; line-height: 1.5; min-height: ${TEMPLATE_VARS.infoBoxMinHeightPx}px; }
+      .info-box { border: 1px solid #444; padding: 8px 12px; font-size: 12.5px; line-height: 1.5; min-height: 64px; }
       .img-col img { width: 100%; height: auto; display: block; border: 1px solid #999; margin-bottom: 4px; object-fit: contain; }
       .quant-section-full { width: 100%; margin-top: 8px; }
       .proc-note { font-size: 13px; font-weight: 700; color: #222; margin: 8px 0 4px; }
-      table.quant-table { width: 100%; font-size: ${TEMPLATE_VARS.quantFontSizePx}px; margin: 2px 0 4px; }
-      table.quant-table th { border-top: 1.4px solid ${TEMPLATE_VARS.quantHeaderBorderColor}; border-bottom: 1px solid ${TEMPLATE_VARS.quantHeaderBorderColor}; text-align: left; font-weight: 700; padding: ${TEMPLATE_VARS.quantRowPaddingVPx}px ${TEMPLATE_VARS.quantRowPaddingHPx}px ${TEMPLATE_VARS.quantRowPaddingVPx}px 0; }
-      table.quant-table td { padding: ${TEMPLATE_VARS.quantRowPaddingVPx}px ${TEMPLATE_VARS.quantRowPaddingHPx}px ${TEMPLATE_VARS.quantRowPaddingVPx}px 0; text-align: left; white-space: nowrap; }
+      table.quant-table { width: 100%; font-size: 13px; margin: 2px 0 4px; }
+      table.quant-table th { border-top: 1.4px solid #111; border-bottom: 1px solid #111; text-align: left; font-weight: 700; padding: 5px 10px 5px 0; }
+      table.quant-table td { padding: 4px 10px 4px 0; text-align: left; white-space: nowrap; }
       table.quant-table tr.spacer td { padding: 4px 0; border: none; }
-      table.quant-table tr.stat-row:first-of-type td { border-top: 1px solid ${TEMPLATE_VARS.quantHeaderBorderColor}; }
-      table.quant-table tr.last-row td { border-bottom: 1.4px solid ${TEMPLATE_VARS.quantHeaderBorderColor}; }
+      table.quant-table tr.stat-row:first-of-type td { border-top: 1px solid #111; }
+      table.quant-table tr.last-row td { border-bottom: 1.4px solid #111; }
       .weight-note { font-size: 12px; color: #333; margin: 3px 0 14px; }
       .no-quant-msg { font-size: 11.5px; color: #5b6478; font-style: italic; font-family: "Segoe UI", sans-serif; margin: 6px 0 14px; }
-      .comment-box { border: 1px solid ${TEMPLATE_VARS.commentBorderColor}; }
-      .comment-box .cb-title { padding: 7px 12px; font-size: ${TEMPLATE_VARS.commentFontSizePx}px; font-weight: 600; border-bottom: 1px solid ${TEMPLATE_VARS.commentBorderColor}; }
-      table.comment-table { width: 100%; font-size: ${TEMPLATE_VARS.commentFontSizePx}px; }
-      table.comment-table td { border: 1px solid ${TEMPLATE_VARS.commentBorderColor}; padding: ${TEMPLATE_VARS.commentCellPaddingVPx}px ${TEMPLATE_VARS.commentCellPaddingHPx}px; vertical-align: top; }
-      table.comment-table td.c-label { width: ${TEMPLATE_VARS.commentLabelWidthPx}px; background: #fafafa; }
+      .comment-box { border: 1px solid #444; }
+      .comment-box .cb-title { padding: 7px 12px; font-size: 12.5px; font-weight: 600; border-bottom: 1px solid #444; }
+      table.comment-table { width: 100%; font-size: 12.5px; }
+      table.comment-table td { border: 1px solid #444; padding: 5px 9px; vertical-align: top; }
+      table.comment-table td.c-label { width: 140px; background: #fafafa; }
       .photo-mini-grid { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
       .photo-mini { display: flex; align-items: center; gap: 7px; border: 1px solid #e3e6ee; border-radius: 4px; padding: 3px 6px; font-family: "Segoe UI", sans-serif; font-size: 10.5px; }
       .photo-mini img { width: 38px; height: 30px; object-fit: cover; border-radius: 2px; background: #ddd; flex: none; }
@@ -2599,7 +2270,8 @@
       table.details-mini td:first-child { background: #f4f5fa; font-weight: 600; width: 170px; }
     `;
   }
-function fullHtmlDocument(bodyEl, title){
+
+  function fullHtmlDocument(bodyEl, title){
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2644,14 +2316,13 @@ ${bodyEl.innerHTML}
 
     // Word handles page margins via @page Section1 (15mm all sides).
     // .sheet inside Word must fill width without double-padding:
-    const bFont = TEMPLATE_VARS.bodyFontFamily === "Times New Roman" ? "\"Times New Roman\", Georgia, serif" : (TEMPLATE_VARS.bodyFontFamily === "Arial" ? "Arial, sans-serif" : "Calibri, sans-serif");
-    apply('.sheet', `background:#ffffff;width:100%;margin:0;padding:0;font-family:${bFont};font-size:${TEMPLATE_VARS.bodyFontSizePx}px;line-height:${TEMPLATE_VARS.bodyLineHeight};`);
+    apply('.sheet', 'background:#ffffff;width:100%;margin:0;padding:0;font-family:"Times New Roman",Georgia,serif;');
 
-    apply('table.cover-grid, table.invest-grid', `width:100%;border-collapse:collapse;font-size:${TEMPLATE_VARS.coverFontSizePx}px;font-family:${bFont};table-layout:fixed;mso-table-layout-alt:fixed;`);
-    apply('table.cover-grid td, table.invest-grid td', `border:1px solid ${TEMPLATE_VARS.coverBorderColor};padding:${TEMPLATE_VARS.coverCellPaddingVPx}px ${TEMPLATE_VARS.coverCellPaddingHPx}px;vertical-align:top;`);
-    apply('.cover-title-row td', `background:${TEMPLATE_VARS.titleRowBg};color:${TEMPLATE_VARS.titleRowColor};font-weight:bold;border:1px solid ${TEMPLATE_VARS.titleRowBg};padding:${TEMPLATE_VARS.titleRowPaddingVPx}px ${TEMPLATE_VARS.titleRowPaddingHPx}px;`);
-    apply('.cover-title-row td.big', `font-size:${TEMPLATE_VARS.titleRowFontSizeBigPx}px;text-align:center;`);
-    apply('.cover-title-row td.small', `font-size:${TEMPLATE_VARS.titleRowFontSizeSmallPx}px;`);
+    apply('table.cover-grid, table.invest-grid', 'width:100%;border-collapse:collapse;font-size:12.5px;font-family:"Times New Roman",Georgia,serif;table-layout:fixed;mso-table-layout-alt:fixed;');
+    apply('table.cover-grid td, table.invest-grid td', 'border:1px solid #97a0bd;padding:4px 6px;vertical-align:top;');
+    apply('.cover-title-row td', 'background:#000080;color:#ffffff;font-weight:bold;border:1px solid #000080;padding:8px 10px;');
+    apply('.cover-title-row td.big', 'font-size:16px;text-align:center;');
+    apply('.cover-title-row td.small', 'font-size:13px;');
     apply('table.cover-grid td.lbl, table.invest-grid td.lbl', 'background:#f4f5fa;font-weight:bold;text-align:left;');
     apply('table.cover-grid td.sec, table.invest-grid td.sec', 'background:#e7e9f3;font-weight:bold;');
     apply('table.cover-grid td.chk-indicator, table.invest-grid td.chk-indicator', 'text-align:center;font-weight:bold;font-family:Arial,sans-serif;font-size:12.5px;');
@@ -2681,7 +2352,7 @@ ${bodyEl.innerHTML}
       const leftTd = tbl.querySelector('td.twocol-l');
       if (leftTd){
         if (rightTd){
-          leftTd.style.width = TEMPLATE_VARS.leftColWidthPct + '%';
+          leftTd.style.width = '53%';
           leftTd.style.padding = '0 6px 0 0';
           leftTd.style.verticalAlign = 'top';
         } else {
@@ -2693,16 +2364,16 @@ ${bodyEl.innerHTML}
         }
       }
       if (rightTd){
-        rightTd.style.width = (100 - TEMPLATE_VARS.leftColWidthPct) + '%';
+        rightTd.style.width = '47%';
         rightTd.style.padding = '0 0 0 6px';
         rightTd.style.verticalAlign = 'top';
       }
     });
 
-    apply('table.site-header-bar', `width:100%;border-collapse:collapse;background:${TEMPLATE_VARS.titleRowBg};margin:0 0 10px 0;page-break-inside:avoid;page-break-after:avoid;`);
-    apply('table.site-header-bar td', `color:${TEMPLATE_VARS.titleRowColor};padding:${TEMPLATE_VARS.siteHeaderPaddingVPx}px ${TEMPLATE_VARS.siteHeaderPaddingHPx}px;`);
+    apply('table.site-header-bar', 'width:100%;border-collapse:collapse;background:#000080;margin:0 0 10px 0;page-break-inside:avoid;page-break-after:avoid;');
+    apply('table.site-header-bar td', 'color:#ffffff;padding:9px 14px;');
     apply('table.site-header-bar td.bar-ts', 'text-align:right;white-space:nowrap;font-size:9.5px;color:#cfd4ef;');
-    apply('.site-header-bar .proj-title', `font-size:${TEMPLATE_VARS.siteHeaderFontSizePx}px;font-weight:600;`);
+    apply('.site-header-bar .proj-title', 'font-size:15px;font-weight:600;');
 
     apply('.img-col img', 'display:block;border:1px solid #999999;margin:0 auto 4px auto;');
     apply('.img-col', 'text-align:center;');
@@ -2711,16 +2382,16 @@ ${bodyEl.innerHTML}
     apply('.quant-section-full', 'width:100%;margin-top:6px;');
     apply('.proc-note', 'font-size:12px;font-weight:bold;color:#222222;margin:6px 0 3px 0;');
 
-    apply('table.quant-table', `width:100%;border-collapse:collapse;font-size:${TEMPLATE_VARS.quantFontSizePx}px;margin:2px 0 4px 0;mso-table-layout-alt:fixed;`);
-    apply('table.quant-table th', `border-top:1.4px solid ${TEMPLATE_VARS.quantHeaderBorderColor};border-bottom:1px solid ${TEMPLATE_VARS.quantHeaderBorderColor};text-align:left;font-weight:bold;padding:${TEMPLATE_VARS.quantRowPaddingVPx}px ${TEMPLATE_VARS.quantRowPaddingHPx}px ${TEMPLATE_VARS.quantRowPaddingVPx}px 0;`);
-    apply('table.quant-table td', `padding:${TEMPLATE_VARS.quantRowPaddingVPx}px ${TEMPLATE_VARS.quantRowPaddingHPx}px ${TEMPLATE_VARS.quantRowPaddingVPx}px 0;text-align:left;`);
-    apply('table.quant-table tr.last-row td', `border-bottom:1.4px solid ${TEMPLATE_VARS.quantHeaderBorderColor};`);
+    apply('table.quant-table', 'width:100%;border-collapse:collapse;font-size:12.5px;margin:2px 0 4px 0;mso-table-layout-alt:fixed;');
+    apply('table.quant-table th', 'border-top:1.4px solid #111111;border-bottom:1px solid #111111;text-align:left;font-weight:bold;padding:3.5px 8px 3.5px 0;');
+    apply('table.quant-table td', 'padding:3px 8px 3px 0;text-align:left;');
+    apply('table.quant-table tr.last-row td', 'border-bottom:1.4px solid #111111;');
     apply('.weight-note', 'font-size:11px;color:#333333;margin:2px 0 10px 0;');
 
-    apply('.comment-box', `border:1px solid ${TEMPLATE_VARS.commentBorderColor};page-break-inside:avoid;`);
-    apply('.comment-box .cb-title', `padding:6px 10px;font-size:${TEMPLATE_VARS.commentFontSizePx}px;font-weight:600;border-bottom:1px solid ${TEMPLATE_VARS.commentBorderColor};`);
-    apply('table.comment-table', `width:100%;table-layout:fixed;mso-table-layout-alt:fixed;border-collapse:collapse;font-size:${TEMPLATE_VARS.commentFontSizePx}px;`);
-    apply('table.comment-table td', `border:1px solid ${TEMPLATE_VARS.commentBorderColor};padding:${TEMPLATE_VARS.commentCellPaddingVPx}px ${TEMPLATE_VARS.commentCellPaddingHPx}px;vertical-align:top;word-wrap:break-word;`);
+    apply('.comment-box', 'border:1px solid #444444;page-break-inside:avoid;');
+    apply('.comment-box .cb-title', 'padding:6px 10px;font-size:12px;font-weight:600;border-bottom:1px solid #444444;');
+    apply('table.comment-table', 'width:100%;table-layout:fixed;mso-table-layout-alt:fixed;border-collapse:collapse;font-size:12px;');
+    apply('table.comment-table td', 'border:1px solid #444444;padding:5px 8px;vertical-align:top;word-wrap:break-word;');
     apply('table.comment-table td.c-label', 'width:42%;background:#fafafa;');
     apply('table.comment-table td.c-value', 'width:58%;');
 
@@ -2748,13 +2419,13 @@ ${bodyEl.innerHTML}
           $all('.info-box', info).forEach(box => {
             const boxHtml = box.innerHTML;
             const tbl = document.createElement('table');
-            tbl.setAttribute('style', `width:100%;border-collapse:collapse;mso-table-layout-alt:fixed;border:1px solid ${TEMPLATE_VARS.infoBoxBorderColor};`);
+            tbl.setAttribute('style', 'width:100%;border-collapse:collapse;mso-table-layout-alt:fixed;border:1px solid #444444;');
             tbl.setAttribute('border', '1');
             tbl.setAttribute('cellspacing', '0');
             tbl.setAttribute('cellpadding', '0');
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.setAttribute('style', `border:1px solid ${TEMPLATE_VARS.infoBoxBorderColor};padding:${TEMPLATE_VARS.infoBoxPaddingVPx}px ${TEMPLATE_VARS.infoBoxPaddingHPx}px;font-size:${TEMPLATE_VARS.infoBoxFontSizePx}px;line-height:1.45;font-family:${bFont};`);
+            td.setAttribute('style', 'border:1px solid #444444;padding:7px 10px;font-size:12px;line-height:1.45;font-family:"Times New Roman",Georgia,serif;');
             td.innerHTML = boxHtml;
             tr.appendChild(td);
             tbl.appendChild(tr);
@@ -2772,7 +2443,7 @@ ${bodyEl.innerHTML}
         const rightTd = content.querySelector('td.twocol-r');
         const cg = document.createElement('colgroup');
         if (rightTd){
-          cg.innerHTML = `<col style="width:${TEMPLATE_VARS.leftColWidthPct}%;" width="${TEMPLATE_VARS.leftColWidthPct}%"><col style="width:${100-TEMPLATE_VARS.leftColWidthPct}%;" width="${100-TEMPLATE_VARS.leftColWidthPct}%">`;
+          cg.innerHTML = '<col style="width:53%;" width="53%"><col style="width:47%;" width="47%">';
         } else {
           cg.innerHTML = '<col style="width:100%;" width="100%">';
         }
@@ -2840,7 +2511,7 @@ ${bodyEl.innerHTML}
         const rightTd = tbl.querySelector('td.twocol-r');
         const cg = document.createElement('colgroup');
         if (rightTd){
-          cg.innerHTML = `<col style="width:${TEMPLATE_VARS.leftColWidthPct}%;" width="${TEMPLATE_VARS.leftColWidthPct}%"><col style="width:${100-TEMPLATE_VARS.leftColWidthPct}%;" width="${100-TEMPLATE_VARS.leftColWidthPct}%">`;
+          cg.innerHTML = '<col style="width:53%;" width="53%"><col style="width:47%;" width="47%">';
         } else {
           cg.innerHTML = '<col style="width:100%;" width="100%">';
         }
