@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>edax_report_converter v2.5</title>
+<title>edax_report_converter v2.6</title>
 <style>
   :root{
     --navy:#000080;
@@ -558,7 +558,7 @@
 <header class="app-header">
   <div class="brand">
     <span class="mark"></span>
-    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v2.5</span></h1>
+    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v2.6</span></h1>
     <span class="subtitle">Project Report &rarr; Formatted Summary Report</span>
   </div>
   <div class="actions" id="headerActions">
@@ -701,7 +701,7 @@
 
 </main>
 
-<footer class="app-foot">edax_report_converter v2.5 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
+<footer class="app-foot">edax_report_converter v2.6 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
 
 <div class="toast" id="toast"></div>
 
@@ -752,6 +752,8 @@
     setTimeout(()=> URL.revokeObjectURL(url), 4000);
   }
 
+  let LAST_SAVED_HANDLE = null;
+
   async function saveFileWithPicker(blob, filename, mimeType, description){
     if ('showSaveFilePicker' in window){
       try {
@@ -768,12 +770,29 @@
         }
         if (SOURCE_FILE_HANDLE){
           opts.startIn = SOURCE_FILE_HANDLE;
+        } else if (LAST_SAVED_HANDLE){
+          opts.startIn = LAST_SAVED_HANDLE;
         }
-        const handle = await window.showSaveFilePicker(opts);
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        return true;
+        let handle;
+        try {
+          handle = await window.showSaveFilePicker(opts);
+        } catch(pickerErr){
+          if (pickerErr && pickerErr.name === 'AbortError') return false;
+          // If startIn caused an unexpected issue in a specific browser environment, retry without startIn
+          if (opts.startIn){
+            delete opts.startIn;
+            handle = await window.showSaveFilePicker(opts);
+          } else {
+            throw pickerErr;
+          }
+        }
+        if (handle){
+          LAST_SAVED_HANDLE = handle;
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return true;
+        }
       } catch(err) {
         if (err && err.name === 'AbortError') {
           // User deliberately cancelled the file picker dialog
@@ -1867,6 +1886,7 @@
   function resetToUpload(){
     MODEL = null;
     SOURCE_FILE_HANDLE = null;
+    LAST_SAVED_HANDLE = null;
     $('#workspaceScreen').style.display = 'none';
     $('#previewScreen').style.display = 'none';
     $('#uploadScreen').style.display = 'flex';
@@ -1937,7 +1957,7 @@
   }
 
   async function openReportFilePicker(){
-    if ('showOpenFilePicker' in window && window.location.protocol !== 'file:'){
+    if ('showOpenFilePicker' in window){
       try {
         const [handle] = await window.showOpenFilePicker({
           types: [{
@@ -1948,12 +1968,14 @@
         });
         if (handle){
           SOURCE_FILE_HANDLE = handle;
+          LAST_SAVED_HANDLE = handle;
           const file = await handle.getFile();
           handleFile(file);
           return;
         }
       } catch(err) {
         if (err && err.name === 'AbortError') return;
+        console.warn('showOpenFilePicker error, falling back to file input:', err);
       }
     }
     const fi = $('#fileInput');
@@ -2072,8 +2094,9 @@
       if (typeof item.getAsFileSystemHandle === 'function'){
         try {
           const handle = await item.getAsFileSystemHandle();
-          if (handle && handle.kind === 'file'){
+          if (handle && (handle.kind === 'file' || handle.kind === 'directory')){
             SOURCE_FILE_HANDLE = handle;
+            LAST_SAVED_HANDLE = handle;
           }
         } catch(err){ /* ignore */ }
       }
