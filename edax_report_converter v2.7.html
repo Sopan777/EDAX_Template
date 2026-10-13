@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>edax_report_converter v2.6</title>
+<title>edax_report_converter v2.7</title>
 <style>
   :root{
     --navy:#000080;
@@ -558,7 +558,7 @@
 <header class="app-header">
   <div class="brand">
     <span class="mark"></span>
-    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v2.6</span></h1>
+    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v2.7</span></h1>
     <span class="subtitle">Project Report &rarr; Formatted Summary Report</span>
   </div>
   <div class="actions" id="headerActions">
@@ -621,7 +621,7 @@
         <div class="opt-field" style="margin-bottom:12px;">
           <label>Report Format</label>
           <div style="display:flex;gap:6px;margin-top:4px;">
-            <button type="button" id="sideFmtNormalBtn" class="btn small" style="flex:1;background:#2a3970;color:#fff;">Normal</button>
+            <button type="button" id="sideFmtNormalBtn" class="btn small" style="flex:1;background:#2a3970;color:#fff;">Particle</button>
             <button type="button" id="sideFmtInvestBtn" class="btn small ghost" style="flex:1;">Investigation</button>
           </div>
         </div>
@@ -659,7 +659,7 @@
       <div class="canvas-toolbar">
         <div class="edit-tip"><span class="dot"></span> Click any text or table cell to edit it directly</div>
         <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <button class="btn small" id="formatToggleBtn" type="button" style="display:inline-flex;align-items:center;gap:6px;background:#000080;border-color:#000080;color:#fff;font-weight:700;" title="Switch between Normal and Investigation format">
+          <button class="btn small" id="formatToggleBtn" type="button" style="display:inline-flex;align-items:center;gap:6px;background:#000080;border-color:#000080;color:#fff;font-weight:700;" title="Switch between Particle and Investigation format">
             <span id="formatToggleIcon">📋</span>
             <span id="formatToggleText">Investigation format</span>
           </button>
@@ -701,7 +701,7 @@
 
 </main>
 
-<footer class="app-foot">edax_report_converter v2.6 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
+<footer class="app-foot">edax_report_converter v2.7 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
 
 <div class="toast" id="toast"></div>
 
@@ -1378,7 +1378,7 @@
     return wrap;
   }
 
-  // ---- Cover page (Normal format) ----
+  // ---- Cover page (Particle format) ----
   function coverPair(labelText, valueText, boldValue){
     return [
       el('td', { class:'lbl', contenteditable:'true', text: labelText }),
@@ -1608,32 +1608,22 @@
       el('td', { class:'val', colspan:'4', contenteditable:'true', text:'EDAX Unit was calibrated with cobalt reference standard. EDAX analysis was performed under similar conditions with the following SEM/EDAX parameters.' })
     ]));
 
-    // Row 18: Parameters line 1
-    table.appendChild(coverRow([
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'EHT:    20KV' }),
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'WD:   8.5mm' }),
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'Spot size :' }),
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'' })
-    ]));
+    // Rows 18-20: Parameters in standard 4-column layout matching Particle format
+    table.appendChild(coverRow([...coverPair('EHT', '20KV'), ...coverPair('WD', '8.5mm')]));
+    table.appendChild(coverRow([...coverPair('Spot size', ''), ...coverPair('Signal', 'SE/BSD')]));
+    table.appendChild(coverRow([...coverPair('Dead time', '30-40%'), ...coverPair('Live time', '55')]));
 
-    // Row 19: Parameters line 2
-    table.appendChild(coverRow([
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'Signal: SE/BSD' }),
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'Dead time :30-40 %' }),
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:"Live time : 55" }),
-      el('td', { class:'val', style:'width:25%;', contenteditable:'true', text:'' })
-    ]));
-
-    // Row 20: 6) Sample details
+    // Row 21: 6) Sample details
     table.appendChild(el('tr', null, [
       el('td', { class:'sec', colspan:'4', contenteditable:'true', text:'6) Sample details' })
     ]));
 
-    // Rows 21-26: Details
+    // Rows 22-28: Details (with Injector no. below External Customer .)
     [
       ['Requisition Dept.', ''],
       ['Requisition dept complaint No.', ''],
       ['External Customer .', ''],
+      ['Injector no.', ''],
       ['MFD & Sr. No.', ''],
       ['Part Name & Number', ''],
       ['Sample Submission date', '']
@@ -1755,7 +1745,7 @@
       $all('[contenteditable]', rr).forEach(n => { n.spellcheck = false; });
       renderOutline(MODEL);
     }
-    showToast(`Switched to ${fmt === 'investigation' ? 'Investigation' : 'Normal'} format.`);
+    showToast(`Switched to ${fmt === 'investigation' ? 'Investigation' : 'Particle'} format.`);
   }
 
   function updateFormatUi(){
@@ -1765,7 +1755,7 @@
     const icon = $('#formatToggleIcon');
     if (btn && txt){
       if (isInvest){
-        txt.textContent = 'Normal format';
+        txt.textContent = 'Particle format';
         if (icon) icon.textContent = '📄';
         btn.style.background = '#2a3970';
         btn.style.borderColor = '#2a3970';
@@ -1822,7 +1812,7 @@
       list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#investigationCoverSheet1', text: 'Investigation Page 1' }) ]));
       list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#investigationCoverSheet2', text: 'Observations & Conclusions (Page 2)' }) ]));
     } else {
-      list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#coverSheet', text: 'Cover Page' }) ]));
+      list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#coverSheet', text: 'Particle Cover Page' }) ]));
     }
     model.project.specimens.forEach((sp, sIdx) => {
       list.appendChild(el('li', { class:'lvl-2' }, [ el('a', { href:'#specimen_'+sIdx+'_site_0', text: sp.title }) ]));
