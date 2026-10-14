@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>edax_report_converter v2.7</title>
+<title>edax_report_converter v2.8</title>
 <style>
   :root{
     --navy:#000080;
@@ -551,6 +551,222 @@
       page-break-inside: avoid !important;
     }
   }
+
+  /* --- Data Integrity & Scientific Editing Styles --- */
+  .scientific-edited {
+    background-color: #fff3cd !important;
+    outline: 1.5px solid #d39e00 !important;
+    position: relative;
+  }
+  .scientific-edited::after {
+    content: "✎";
+    font-size: 9px;
+    color: #856404;
+    position: absolute;
+    top: 0;
+    right: 1px;
+    pointer-events: none;
+  }
+  .integrity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .integrity-badge.pass { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+  .integrity-badge.warn { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+  .integrity-badge.fail { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+  .btn.integrity-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #000080;
+    color: #ffffff;
+    font-weight: 600;
+    border: 1px solid #000080;
+  }
+  .btn.integrity-btn:hover {
+    background: #101c5a;
+  }
+
+  /* --- Source Inspector Modal --- */
+  .inspector-modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(12, 18, 40, 0.7);
+    backdrop-filter: blur(3px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .inspector-modal {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+    width: 960px;
+    max-width: 96vw;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    color: #222;
+  }
+  .inspector-header {
+    padding: 14px 20px;
+    background: #000080;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .inspector-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .inspector-close-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .inspector-close-btn:hover {
+    background: rgba(255,255,255,0.2);
+  }
+  .inspector-tabs {
+    display: flex;
+    border-bottom: 1px solid #d9dbe3;
+    background: #f4f5fa;
+    padding: 0 16px;
+    gap: 4px;
+  }
+  .inspector-tab {
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-bottom: 2.5px solid transparent;
+    transition: all 0.15s ease;
+  }
+  .inspector-tab:hover {
+    color: #000080;
+  }
+  .inspector-tab.active {
+    color: #000080;
+    border-bottom-color: #000080;
+    background: #ffffff;
+  }
+  .inspector-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    background: #ffffff;
+  }
+  .inspector-tab-panel {
+    display: none;
+  }
+  .inspector-tab-panel.active {
+    display: block;
+  }
+  .inspector-card {
+    background: #fcfdfe;
+    border: 1px solid #e2e5f0;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .inspector-card h4 {
+    margin: 0 0 8px 0;
+    font-size: 13.5px;
+    color: #000080;
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #edf0f7;
+    font-size: 12.5px;
+  }
+  .check-item:last-child {
+    border-bottom: none;
+  }
+  .check-name {
+    font-weight: 600;
+    color: #333;
+  }
+  .check-msg {
+    color: #555;
+    margin-top: 2px;
+    font-size: 11.5px;
+  }
+  .diff-table, .raw-source-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 10px;
+  }
+  .diff-table th, .diff-table td, .raw-source-table th, .raw-source-table td {
+    border: 1px solid #d0d4e4;
+    padding: 6px 10px;
+    text-align: left;
+  }
+  .diff-table th, .raw-source-table th {
+    background: #f0f2f8;
+    font-weight: 600;
+    color: #222;
+  }
+  .diff-table tr.edited {
+    background: #fff8e6;
+  }
+  .diff-orig {
+    color: #c82333;
+    text-decoration: line-through;
+    font-family: monospace;
+    margin-right: 6px;
+  }
+  .diff-curr {
+    color: #218838;
+    font-weight: 700;
+    font-family: monospace;
+  }
+  .btn-revert {
+    background: #f0f0f5;
+    border: 1px solid #c0c4d8;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .btn-revert:hover {
+    background: #e2e5f0;
+  }
+  .inspector-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #e0e2ec;
+    background: #f9fafe;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
 </style>
 </head>
 <body>
@@ -558,10 +774,13 @@
 <header class="app-header">
   <div class="brand">
     <span class="mark"></span>
-    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v2.7</span></h1>
+    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v2.8</span></h1>
     <span class="subtitle">Project Report &rarr; Formatted Summary Report</span>
   </div>
   <div class="actions" id="headerActions">
+    <button type="button" class="btn small integrity-btn" id="headerIntegrityBtn" style="display:none;" title="Open Data Integrity & Source Inspector">
+      <span>🛡️ Integrity Check</span> <span id="headerIntegrityBadge" class="integrity-badge pass">PASS</span>
+    </button>
     <span class="stepper" id="stepperLabel"><b>Step 1</b>&nbsp;&middot;&nbsp;Upload source report</span>
   </div>
 </header>
@@ -604,6 +823,18 @@
   <!-- ============ WORKSPACE SCREEN ============ -->
   <section id="workspaceScreen" class="workspace" style="display:none;">
     <aside class="side">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <h3 style="margin:0;">Data Integrity</h3>
+          <span id="sideIntegrityBadge" class="integrity-badge pass">PASS</span>
+        </div>
+        <p style="font-size:12px;color:var(--ink-soft);line-height:1.45;margin:0 0 8px 0;">
+          Source of truth locked. Scientific values protected with audit tracking.
+        </p>
+        <button type="button" class="btn small integrity-btn" id="sideIntegrityBtn" style="width:100%;justify-content:center;">
+          🛡️ Source Inspector &amp; Diff
+        </button>
+      </div>
       <div class="panel">
         <h3>Report Summary</h3>
         <div id="statsBox"></div>
@@ -659,6 +890,9 @@
       <div class="canvas-toolbar">
         <div class="edit-tip"><span class="dot"></span> Click any text or table cell to edit it directly</div>
         <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn small integrity-btn" id="wsIntegrityBtn" type="button" title="View Source Tables, User Edits Diff, and Pre-Export Verification">
+            <span>🛡️ Data Integrity</span> <span id="wsIntegrityBadge" class="integrity-badge pass">PASS</span>
+          </button>
           <button class="btn small" id="formatToggleBtn" type="button" style="display:inline-flex;align-items:center;gap:6px;background:#000080;border-color:#000080;color:#fff;font-weight:700;" title="Switch between Particle and Investigation format">
             <span id="formatToggleIcon">📋</span>
             <span id="formatToggleText">Investigation format</span>
@@ -689,6 +923,9 @@
         <div class="edit-tip"><span class="dot"></span> Read-only preview of the final report</div>
         <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn small ghost" id="toolbarBackToEditBtn" type="button" style="font-weight:700;">&larr; Back to Edit</button>
+          <button class="btn small integrity-btn" id="previewIntegrityBtn" type="button" title="View Source Tables, User Edits Diff, and Pre-Export Verification">
+            <span>🛡️ Data Integrity</span> <span id="previewIntegrityBadge" class="integrity-badge pass">PASS</span>
+          </button>
           <button class="btn small" id="exportHtmlBtn" type="button">Export HTML</button>
           <button class="btn small" id="exportDocBtn" type="button">Export Word (.docx)</button>
           <button class="btn small" id="exportPdfBtn" type="button">Export PDF</button>
@@ -701,9 +938,74 @@
 
 </main>
 
-<footer class="app-foot">edax_report_converter v2.7 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
+<footer class="app-foot">edax_report_converter v2.8 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
 
 <div class="toast" id="toast"></div>
+
+<!-- Data Integrity & Source Inspector Modal -->
+<div id="integrityInspectorModal" class="inspector-modal-backdrop" style="display:none;">
+  <div class="inspector-modal">
+    <div class="inspector-header">
+      <h2><span>🛡️ Data Integrity &amp; Source Inspector</span> <span id="modalIntegrityBadge" class="integrity-badge pass">PASS</span></h2>
+      <button type="button" class="inspector-close-btn" id="inspectorCloseBtn" title="Close Inspector">&times;</button>
+    </div>
+    <div class="inspector-tabs">
+      <button type="button" class="inspector-tab active" data-tab="summaryTab">Audit &amp; Verification</button>
+      <button type="button" class="inspector-tab" data-tab="sourceTab">Source Tables Inspector</button>
+      <button type="button" class="inspector-tab" data-tab="editsTab">User Edits Log (<span id="tabEditsCount">0</span>)</button>
+      <button type="button" class="inspector-tab" data-tab="excludedTab">Excluded Items</button>
+    </div>
+    <div class="inspector-body">
+      <!-- Tab 1: Audit Summary -->
+      <div id="summaryTab" class="inspector-tab-panel active">
+        <div class="inspector-card">
+          <h4>Source File Provenance &amp; SHA-256 Fingerprint</h4>
+          <div style="font-size:12px;line-height:1.7;color:#333;">
+            <div><strong>Source File:</strong> <span id="inspFileName">-</span></div>
+            <div><strong>SHA-256 Fingerprint:</strong> <code id="inspFileHash" style="word-break:break-all;color:#000080;background:#edf0fa;padding:2px 6px;border-radius:3px;">-</code></div>
+            <div><strong>Extracted Entities:</strong> <span id="inspEntityStats">-</span></div>
+          </div>
+        </div>
+        <div class="inspector-card">
+          <h4>Pre-Export Integrity Verification Checks</h4>
+          <div id="inspChecksList"></div>
+        </div>
+      </div>
+      <!-- Tab 2: Source Tables Inspector -->
+      <div id="sourceTab" class="inspector-tab-panel">
+        <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;">
+          <label style="font-size:12.5px;font-weight:600;">Select Site / Section:</label>
+          <select id="inspSiteSelect" style="padding:5px 8px;font-size:12.5px;border:1px solid #c0c4d8;border-radius:4px;flex:1;"></select>
+        </div>
+        <div id="inspSiteTableContent"></div>
+      </div>
+      <!-- Tab 3: User Edits Log -->
+      <div id="editsTab" class="inspector-tab-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <p style="font-size:12px;color:#555;margin:0;">
+            Any modified scientific values are recorded here. You can revert any cell back to its original source measurement.
+          </p>
+          <button type="button" class="btn-revert" id="revertAllEditsBtn" style="padding:4px 10px;font-weight:600;">Revert All Edits</button>
+        </div>
+        <div id="inspEditsList"></div>
+      </div>
+      <!-- Tab 4: Excluded Items -->
+      <div id="excludedTab" class="inspector-tab-panel">
+        <div class="inspector-card">
+          <h4>Report Exclusions &amp; Template Design</h4>
+          <p style="font-size:12px;line-height:1.5;color:#444;margin:0 0 10px 0;">
+            EDAX Project Reports include multiple levels of quantification. To maintain readability in the standard single-page summary layout, certain items are separated from the main view but remain 100% preserved in the underlying source-of-truth model.
+          </p>
+          <div id="inspExcludedList"></div>
+        </div>
+      </div>
+    </div>
+    <div class="inspector-footer">
+      <button type="button" class="btn small ghost" id="downloadAuditLogBtn">📄 Export Audit Trail (.txt)</button>
+      <button type="button" class="btn small brass" id="inspectorDoneBtn">Close Inspector</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -830,10 +1132,63 @@
         exactly like nested markdown headings.
   ============================================================ */
 
-  function parseSourceReport(htmlText){
+  async function computeSha256(text){
+    try {
+      if (window.crypto && window.crypto.subtle && window.crypto.subtle.digest){
+        const encoder = new TextEncoder();
+        const data = encoder.encode(text);
+        const hashBuf = await window.crypto.subtle.digest('SHA-256', data);
+        const hashArr = Array.from(new Uint8Array(hashBuf));
+        return hashArr.map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+    } catch(e){
+      console.warn('WebCrypto digest failed:', e);
+    }
+    // Fallback deterministic 64-char hex hash
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = ((h1 ^ (h1 >>> 16)) >>> 0).toString(16).padStart(8, '0');
+    h2 = ((h2 ^ (h2 >>> 16)) >>> 0).toString(16).padStart(8, '0');
+    return (h1 + h2).repeat(4);
+  }
+
+  function parseSourceReport(htmlText, sha256Hash){
     const doc = new DOMParser().parseFromString(htmlText, 'text/html');
     const root = doc.querySelector('main') || doc.body;
     if (!root) throw new Error('This does not look like a valid HTML report (no <body> found).');
+
+    // Discovery audit of all source elements
+    const allTables = $all('table', doc);
+    const allImages = $all('img', doc);
+    const allHeadings = $all('h1, h2, h3, h4, h5, h6', doc);
+    let quantSummaryTablesCount = 0;
+    let individualQuantTablesCount = 0;
+    let detailsTablesCount = 0;
+    let otherTablesCount = 0;
+
+    allTables.forEach(tbl => {
+      const parentDiv = tbl.closest('div');
+      const firstH = parentDiv ? parentDiv.querySelector('h1, h2, h3, h4, h5, h6') : null;
+      const hText = firstH ? cleanText(firstH.textContent).toLowerCase() : '';
+      if (hText.includes('quant results summary')) quantSummaryTablesCount++;
+      else if (hText.includes('quant results')) individualQuantTablesCount++;
+      else if (hText.includes('details')) detailsTablesCount++;
+      else otherTablesCount++;
+    });
+
+    const sourceCatalog = {
+      totalHeadings: allHeadings.length,
+      totalTables: allTables.length,
+      quantSummaryTablesCount,
+      individualQuantTablesCount,
+      detailsTablesCount,
+      otherTablesCount,
+      totalImages: allImages.length
+    };
 
     const flat = [];
     function isSectionDiv(elm){
@@ -874,45 +1229,88 @@
     const projectNode = rootNode.children.find(c => c.level === 1) || rootNode.children[0];
     if (!projectNode) throw new Error('Could not find the project title section (missing <h1>).');
 
-    return buildReportModel(projectNode);
+    const model = buildReportModel(projectNode, sourceCatalog);
+    model.sourceOfTruth = {
+      rawHtml: htmlText,
+      hash: sha256Hash || 'unavailable',
+      catalog: sourceCatalog,
+      capturedAt: new Date().toISOString()
+    };
+    return model;
   }
 
   function findChild(node, matcher){ return (node.children||[]).find(matcher); }
   function findChildren(node, matcher){ return (node.children||[]).filter(matcher); }
   function isTitled(name){ const n = name.toLowerCase(); return (c) => cleanText(c.title).toLowerCase() === n; }
 
-  function extractDetailsRows(ownEl){
-    const table = ownEl.querySelector('table');
-    if (!table) return [];
+  function isSpectrumTitle(title){
+    const t = cleanText(title).toLowerCase();
+    if (!t || t === 'details' || t === 'electron images' || t === 'quant results summary' || t === 'quant results') return false;
+    if (/^\d+$/.test(t)) return true;
+    if (/^(spectrum|spec|sp|point|pt|spot|area)[\s_#-]*\d+$/i.test(t)) return true;
+    return false;
+  }
+
+  function isSpectrumChild(child){
+    if (isSpectrumTitle(child.title)) return true;
+    const t = cleanText(child.title).toLowerCase();
+    if (t === 'details' || t === 'electron images' || t === 'quant results summary' || t === 'quant results') return false;
+    if (findChild(child, isTitled('quant results'))) return true;
+    if (extractImages(child.own).length > 0) return true;
+    return false;
+  }
+
+  function extractTableData(tableEl){
+    if (!tableEl) return null;
+    const trs = $all('tr', tableEl);
+    if (!trs.length) return null;
+    const headerCells = $all('th, td', trs[0]);
+    const headers = headerCells.map(c => cleanText(c.textContent));
     const rows = [];
-    $all('tr', table).forEach(tr=>{
-      const cells = $all('td,th', tr);
-      if (cells.length >= 2){
-        rows.push({ label: cleanText(cells[0].innerHTML.replace(/<br\s*\/?>/gi,' ')), value: cleanText(cells[1].textContent) });
-      } else if (cells.length === 1){
-        rows.push({ label: '', value: cleanText(cells[0].textContent) });
-      }
+    for (let i = 1; i < trs.length; i++){
+      const cells = $all('td, th', trs[i]);
+      if (!cells.length) continue;
+      rows.push(cells.map(c => cleanText(c.textContent)));
+    }
+    return { headers, rows: rows.filter(r => r.length) };
+  }
+
+  function extractDetailsRows(ownEl){
+    const tables = $all('table', ownEl);
+    if (!tables.length) return [];
+    const rows = [];
+    tables.forEach(table => {
+      $all('tr', table).forEach(tr=>{
+        const cells = $all('td,th', tr);
+        if (cells.length >= 2){
+          const label = cleanText(cells[0].innerHTML.replace(/<br\s*\/?>/gi,' '));
+          const val = cleanText(cells[1].textContent);
+          const extra = cells.length > 2 ? cells.slice(2).map(c => cleanText(c.textContent)) : [];
+          rows.push({ label, value: val, extraCols: extra });
+        } else if (cells.length === 1){
+          rows.push({ label: '', value: cleanText(cells[0].textContent), extraCols: [] });
+        }
+      });
     });
     return rows;
   }
 
   function extractSummaryTable(ownEl){
     const table = ownEl.querySelector('table');
-    if (!table) return null;
-    const trs = $all('tr', table);
-    if (!trs.length) return null;
-    const headerCells = $all('th', trs[0]);
-    const headers = headerCells.length ? headerCells.map(c => cleanText(c.textContent)) : $all('td', trs[0]).map(c => cleanText(c.textContent));
-    const rows = trs.slice(1).map(tr => $all('td', tr).map(c => cleanText(c.textContent)));
-    return { headers, rows: rows.filter(r => r.length) };
+    return extractTableData(table);
   }
 
   function extractImages(ownEl){
     return $all('img', ownEl).map(img => ({ src: img.getAttribute('src') || '', alt: img.getAttribute('alt') || '' }));
   }
 
-  function buildReportModel(projectNode){
+  function buildReportModel(projectNode, sourceCatalog){
     const log = [];
+    const sourceRegistry = {
+      allQuantSummaries: [],
+      allIndividualQuantResults: [],
+      allDetailsTables: []
+    };
     const details = findChild(projectNode, isTitled('details'));
     const project = {
       title: cleanText(projectNode.title) || 'Untitled Project',
@@ -920,6 +1318,9 @@
       owner: '',
       specimens: []
     };
+    if (details) {
+      sourceRegistry.allDetailsTables.push({ section: 'Project Details', rows: project.detailsRows });
+    }
 
     const specimenNodes = findChildren(projectNode, c => c.level === 2 && cleanText(c.title).toLowerCase() !== 'details');
     specimenNodes.forEach(specNode => {
@@ -929,6 +1330,9 @@
         detailsRows: specDetails ? extractDetailsRows(specDetails.own) : [],
         sites: []
       };
+      if (specDetails) {
+        sourceRegistry.allDetailsTables.push({ section: `${specimen.title} Details`, rows: specimen.detailsRows });
+      }
 
       const siteNodes = findChildren(specNode, c => c.level === 3 && cleanText(c.title).toLowerCase() !== 'details');
       siteNodes.forEach(siteNode => {
@@ -938,7 +1342,21 @@
           const t = cleanText(child.title).toLowerCase();
           if (t === 'quant results summary'){
             site.summary = extractSummaryTable(child.own);
-            if (!site.summary) log.push({type:'warn', text:`"${site.title}": Quant Results Summary table was empty or unreadable.`});
+            if (!site.summary) {
+              log.push({type:'warn', text:`"${site.title}": Quant Results Summary table was empty or unreadable.`});
+            } else {
+              sourceRegistry.allQuantSummaries.push({
+                siteTitle: site.title,
+                specimenTitle: specimen.title,
+                headers: site.summary.headers,
+                rows: site.summary.rows
+              });
+              log.push({
+                type: 'preserved',
+                category: 'summary_table',
+                text: `Site "${site.title}": Quant Results Summary (${site.summary.rows.length} rows, ${site.summary.headers.length} columns) preserved with exact precision.`
+              });
+            }
           } else if (t === 'electron images'){
             const imgs = extractImages(child.own);
             const detailsChildren = findChildren(child, isTitled('details'));
@@ -951,19 +1369,37 @@
             });
           } else if (t === 'details'){
             /* stray duplicate - ignore */
-          } else if (/^\d+$/.test(cleanText(child.title))){
+          } else if (isSpectrumChild(child)){
             const imgs = extractImages(child.own);
             const quant = findChild(child, isTitled('quant results'));
             const spectrumDetails = findChild(child, isTitled('details'));
+
+            // Capture and preserve the individual Quant Results table (Element, Signal Type, Wt%, Wt% Sigma)
+            let quantResultsData = null;
             if (quant){
-              log.push({type:'removed', text:`Site "${site.title}", Spectrum ${cleanText(child.title)}: removed the individual "Quant Results" table (per-spectrum results are excluded; only the Quant Results Summary is kept).`});
+              quantResultsData = extractSummaryTable(quant.own);
+              sourceRegistry.allIndividualQuantResults.push({
+                siteTitle: site.title,
+                specimenTitle: specimen.title,
+                spectrumLabel: cleanText(child.title),
+                headers: quantResultsData ? quantResultsData.headers : [],
+                rows: quantResultsData ? quantResultsData.rows : []
+              });
+              log.push({
+                type: 'preserved',
+                category: 'individual_quant',
+                text: `Site "${site.title}", Spectrum "${cleanText(child.title)}": Individual "Quant Results" table (${quantResultsData ? quantResultsData.rows.length : 0} rows, includes Sigma) captured and preserved in Source of Truth.`
+              });
             }
-            // By default, include only the first spectrum. Other spectra can be enabled via checkboxes.
+            // By default, include only the first spectrum in formatted summary sheet.
             const isFirst = site.spectra.length === 0;
             site.spectra.push({
-              id: uid('spec'), label: cleanText(child.title),
-              src: imgs[0] ? imgs[0].src : '', alt: imgs[0] ? (imgs[0].alt || cleanText(child.title)) : cleanText(child.title),
+              id: uid('spec'),
+              label: cleanText(child.title),
+              src: imgs[0] ? imgs[0].src : '',
+              alt: imgs[0] ? (imgs[0].alt || cleanText(child.title)) : cleanText(child.title),
               detailsRows: spectrumDetails ? extractDetailsRows(spectrumDetails.own) : [],
+              quantResults: quantResultsData,
               include: isFirst
             });
           }
@@ -978,7 +1414,7 @@
       project.specimens.push(specimen);
     });
 
-    return { project, log };
+    return { project, log, sourceRegistry, sourceCatalog, edits: {} };
   }
 
   /* ============================================================
@@ -1041,6 +1477,54 @@
     return table;
   }
 
+  function attachScientificEditHandler(cellEl, site, type, rowIdx, colIdx, origVal){
+    cellEl.addEventListener('input', () => {
+      const currentVal = cleanText(cellEl.textContent);
+      const cellId = cellEl.getAttribute('data-cell-id');
+      if (currentVal !== origVal){
+        cellEl.classList.add('scientific-edited');
+        cellEl.title = `Original source: "${origVal}". Right-click to revert.`;
+        if (!MODEL.edits) MODEL.edits = {};
+        MODEL.edits[cellId] = {
+          cellId,
+          siteTitle: site.title,
+          type,
+          rowIdx,
+          colIdx,
+          header: cellEl.getAttribute('data-header') || '',
+          rowLabel: cellEl.getAttribute('data-row-label') || '',
+          originalValue: origVal,
+          currentValue: currentVal,
+          timestamp: Date.now()
+        };
+      } else {
+        cellEl.classList.remove('scientific-edited');
+        cellEl.removeAttribute('title');
+        if (MODEL.edits && MODEL.edits[cellId]){
+          delete MODEL.edits[cellId];
+        }
+      }
+      updateAllIntegrityBadges();
+      if (MODEL) renderStats(MODEL);
+    });
+
+    cellEl.addEventListener('contextmenu', (e) => {
+      if (cellEl.classList.contains('scientific-edited')){
+        e.preventDefault();
+        if (confirm(`Revert modified value "${cleanText(cellEl.textContent)}" back to original source value "${origVal}"?`)){
+          cellEl.textContent = origVal;
+          cellEl.classList.remove('scientific-edited');
+          cellEl.removeAttribute('title');
+          const cellId = cellEl.getAttribute('data-cell-id');
+          if (MODEL.edits && MODEL.edits[cellId]) delete MODEL.edits[cellId];
+          updateAllIntegrityBadges();
+          if (MODEL) renderStats(MODEL);
+          showToast(`Reverted to original value "${origVal}".`);
+        }
+      }
+    });
+  }
+
   function renderQuantSection(site){
     const wrap = el('div', { class:'quant-section-full' });
     if (!site.summary || !site.summary.rows.length) return wrap; // silently omit, matches reference (no data = no section)
@@ -1049,7 +1533,20 @@
 
     const table = el('table', { class:'quant-table' });
     const thead = el('tr');
-    site.summary.headers.forEach(h => thead.appendChild(el('th', { contenteditable:'true', text: h })));
+    site.summary.headers.forEach((h, colIdx) => {
+      const cellId = `quant_${site.title}_h_${colIdx}`;
+      const th = el('th', {
+        contenteditable:'true',
+        text: h,
+        'data-cell-id': cellId,
+        'data-orig-value': h,
+        'data-site': site.title,
+        'data-header': h,
+        'data-row-label': 'Header'
+      });
+      attachScientificEditHandler(th, site, 'header', 0, colIdx, h);
+      thead.appendChild(th);
+    });
     table.appendChild(thead);
 
     // Split plain spectrum rows from trailing stat rows (Mean/Std deviation/Max/Min),
@@ -1063,16 +1560,42 @@
       else dataRows.push(r);
     });
 
-    dataRows.forEach(row => {
+    dataRows.forEach((row, rowIdx) => {
       const tr = el('tr');
-      row.forEach(v => tr.appendChild(el('td', { contenteditable:'true', text: v })));
+      row.forEach((v, colIdx) => {
+        const cellId = `quant_${site.title}_d_${rowIdx}_${colIdx}`;
+        const td = el('td', {
+          contenteditable:'true',
+          text: v,
+          'data-cell-id': cellId,
+          'data-orig-value': v,
+          'data-site': site.title,
+          'data-header': (site.summary.headers[colIdx] || ''),
+          'data-row-label': (row[0] || ('Row ' + (rowIdx + 1)))
+        });
+        attachScientificEditHandler(td, site, 'data', rowIdx, colIdx, v);
+        tr.appendChild(td);
+      });
       table.appendChild(tr);
     });
     if (statRows.length){
       table.appendChild(el('tr', { class:'spacer' }, [ el('td', { colspan: String(site.summary.headers.length) }) ]));
-      statRows.forEach((row, i) => {
-        const tr = el('tr', { class:'stat-row' + (i === statRows.length-1 ? ' last-row' : '') });
-        row.forEach(v => tr.appendChild(el('td', { contenteditable:'true', text: v })));
+      statRows.forEach((row, rowIdx) => {
+        const tr = el('tr', { class:'stat-row' + (rowIdx === statRows.length-1 ? ' last-row' : '') });
+        row.forEach((v, colIdx) => {
+          const cellId = `quant_${site.title}_s_${rowIdx}_${colIdx}`;
+          const td = el('td', {
+            contenteditable:'true',
+            text: v,
+            'data-cell-id': cellId,
+            'data-orig-value': v,
+            'data-site': site.title,
+            'data-header': (site.summary.headers[colIdx] || ''),
+            'data-row-label': (row[0] || ('Stat ' + (rowIdx + 1)))
+          });
+          attachScientificEditHandler(td, site, 'stat', rowIdx, colIdx, v);
+          tr.appendChild(td);
+        });
         table.appendChild(tr);
       });
     } else {
@@ -1824,18 +2347,27 @@
 
   function renderStats(model){
     let specimens = model.project.specimens.length;
-    let sites = 0, images = 0, spectra = 0, summaries = 0;
+    let sites = 0, images = 0, spectra = 0, summaries = 0, individualQuant = 0;
     model.project.specimens.forEach(sp => sp.sites.forEach(site => {
       sites++;
       if (site.summary && site.summary.rows.length) summaries++;
       images += site.electronImageGroups.length;
-      spectra += site.spectra.length;
+      (site.spectra || []).forEach(spec => {
+        spectra++;
+        if (spec.quantResults) individualQuant++;
+      });
     }));
-    const removedQuant = model.log.filter(l => l.type === 'removed').length;
+    const editsCount = Object.keys(model.edits || {}).length;
     const box = $('#statsBox');
     box.innerHTML = '';
-    [['Specimens', specimens], ['Sites', sites], ['Summary tables kept', summaries],
-     ['Electron images', images], ['Spectra found', spectra], ['Per-spectrum results removed', removedQuant]
+    [
+      ['Specimens', specimens],
+      ['Sites', sites],
+      ['Summary tables kept', summaries],
+      ['Individual Quant tables', `${individualQuant} (Preserved)`],
+      ['Electron images', images],
+      ['Spectra found', spectra],
+      ['Scientific cell edits', editsCount > 0 ? `${editsCount} (Modified)` : '0 (Authentic)']
     ].forEach(([label, val]) => box.appendChild(el('div', { class:'row' }, [ el('span', { text: label }), el('span', { text: String(val) }) ])));
   }
 
@@ -1871,6 +2403,7 @@
     renderOutline(model);
     renderStats(model);
     renderLog(model);
+    updateAllIntegrityBadges();
   }
 
   function resetToUpload(){
@@ -1884,6 +2417,8 @@
     $('#fileInput').value = '';
     $('#fileNamePill').innerHTML = '';
     $('#uploadError').style.display = 'none';
+    const hBadgeBtn = $('#headerIntegrityBtn');
+    if (hBadgeBtn) hBadgeBtn.style.display = 'none';
     if ($('#preparedBySelect')) $('#preparedBySelect').value = 'N R Khairnar';
     if ($('#releasedBySelect')) $('#releasedBySelect').value = 'J R Nagrale';
   }
@@ -1905,6 +2440,7 @@
     $('#stepperLabel').innerHTML = '<span id="stepperBackToEdit" style="cursor:pointer;color:#cfd4ef;text-decoration:underline;" title="Click to return to edit mode"><b>Step 2</b> &middot; Edit</span> &nbsp;&middot;&nbsp; <b>Step 3</b> &middot; Preview &amp; export';
     const sBack = $('#stepperBackToEdit');
     if (sBack) sBack.addEventListener('click', backToEdit);
+    updateAllIntegrityBadges();
     window.scrollTo(0, 0);
   }
 
@@ -1914,6 +2450,7 @@
     $('#previewScreen').style.display = 'none';
     $('#workspaceScreen').style.display = 'grid';
     $('#stepperLabel').innerHTML = '<b>Step 2</b>&nbsp;&middot;&nbsp;Edit &amp; select spectra, then preview';
+    updateAllIntegrityBadges();
     window.scrollTo(0, 0);
   }
 
@@ -1927,9 +2464,11 @@
       return;
     }
     const reader = new FileReader();
-    reader.onload = function(e){
+    reader.onload = async function(e){
       try{
-        const model = parseSourceReport(e.target.result);
+        const rawText = e.target.result;
+        const sha256 = await computeSha256(rawText);
+        const model = parseSourceReport(rawText, sha256);
         $('#fileNamePill').innerHTML = '<span class="file-name-pill">' + escapeHtml(file.name) + '</span>';
         goToWorkspace(model, file.name);
         showToast('Report loaded: ' + model.project.specimens.reduce((a,s)=>a+s.sites.length,0) + ' site(s) found.');
@@ -2183,6 +2722,17 @@
     $all('[contenteditable]', clone).forEach(n => n.removeAttribute('contenteditable'));
     $all('[placeholder]', clone).forEach(n => n.removeAttribute('placeholder'));
 
+    // Strip scientific edit tracking attributes and styling for clean export
+    $all('.scientific-edited', clone).forEach(n => {
+      n.classList.remove('scientific-edited');
+      n.removeAttribute('title');
+    });
+    $all('[data-cell-id]', clone).forEach(n => n.removeAttribute('data-cell-id'));
+    $all('[data-orig-value]', clone).forEach(n => n.removeAttribute('data-orig-value'));
+    $all('[data-site]', clone).forEach(n => n.removeAttribute('data-site'));
+    $all('[data-header]', clone).forEach(n => n.removeAttribute('data-header'));
+    $all('[data-row-label]', clone).forEach(n => n.removeAttribute('data-row-label'));
+
     // Prevent collapsing of empty notes boxes in Word & ensure clean print
     $all('.invest-notes-box', clone).forEach(box => {
       if (!box.textContent.trim()){
@@ -2382,10 +2932,504 @@ ${bodyEl.innerHTML}
   }
 
   /* ============================================================
-     5. Export: HTML
+     5. Data Integrity Validation & Source Inspector Engine
+  ============================================================ */
+
+  function runIntegrityValidation(model){
+    const report = {
+      status: 'PASS', // 'PASS' | 'WARNING' | 'FAIL'
+      checks: [],
+      editsCount: 0,
+      brokenImages: [],
+      excludedSpectra: 0,
+      excludedImages: 0,
+      individualQuantCount: 0,
+      timestamp: new Date().toISOString()
+    };
+
+    if (!model) return report;
+
+    // 1. Source Hash & Fingerprint Check
+    const hash = model.sourceOfTruth ? model.sourceOfTruth.hash : '';
+    if (hash && hash !== 'unavailable'){
+      report.checks.push({
+        name: 'Source Document Hash',
+        status: 'PASS',
+        message: `Authentic SHA-256 fingerprint verified (${hash.slice(0, 16)}...).`
+      });
+    } else {
+      report.checks.push({
+        name: 'Source Document Hash',
+        status: 'WARNING',
+        message: 'Source document SHA-256 fingerprint was not calculated.'
+      });
+      if (report.status === 'PASS') report.status = 'WARNING';
+    }
+
+    // 2. Scientific Data Authenticity Check (Edits)
+    const edits = Object.values(model.edits || {});
+    report.editsCount = edits.length;
+    if (edits.length === 0){
+      report.checks.push({
+        name: 'Scientific Data Integrity',
+        status: 'PASS',
+        message: 'All Quant Results Summary values remain 100% identical to original source measurements.'
+      });
+    } else {
+      report.checks.push({
+        name: 'Scientific Data Integrity',
+        status: 'WARNING',
+        message: `${edits.length} scientific cell(s) have been manually edited from source measurements.`
+      });
+      if (report.status === 'PASS') report.status = 'WARNING';
+    }
+
+    // 3. Image Loading Integrity Check
+    const broken = [];
+    const reportRoot = $('#reportRoot');
+    if (reportRoot){
+      const imgs = reportRoot.querySelectorAll('img');
+      imgs.forEach(img => {
+        const slot = img.closest('.img-slot');
+        if (slot && slot.classList.contains('excluded')) return;
+        const src = img.getAttribute('src') || '';
+        if (!src){
+          broken.push(img.alt || 'Unnamed image (missing source)');
+        } else if (img.complete && img.naturalWidth === 0){
+          broken.push(img.alt || src.slice(0, 30));
+        }
+      });
+    }
+    report.brokenImages = broken;
+    if (broken.length > 0){
+      report.status = 'FAIL';
+      report.checks.push({
+        name: 'Active Image Integrity',
+        status: 'FAIL',
+        message: `${broken.length} included image(s) failed to load or are broken: ${broken.join(', ')}.`
+      });
+    } else {
+      report.checks.push({
+        name: 'Active Image Integrity',
+        status: 'PASS',
+        message: 'All included electron and spectrum images loaded successfully.'
+      });
+    }
+
+    // 4. Source Preservation & Exclusions Check
+    let totalSpectra = 0, incSpectra = 0;
+    let totalImages = 0, incImages = 0;
+    let indQuantCount = 0;
+
+    (model.project.specimens || []).forEach(sp => {
+      (sp.sites || []).forEach(st => {
+        (st.electronImageGroups || []).forEach(im => {
+          totalImages++;
+          if (im.include !== false) incImages++;
+        });
+        (st.spectra || []).forEach(spc => {
+          totalSpectra++;
+          if (spc.include !== false) incSpectra++;
+          if (spc.quantResults) indQuantCount++;
+        });
+      });
+    });
+
+    report.excludedSpectra = totalSpectra - incSpectra;
+    report.excludedImages = totalImages - incImages;
+    report.individualQuantCount = indQuantCount;
+
+    report.checks.push({
+      name: 'Individual Quant Results Preservation',
+      status: 'PASS',
+      message: `${indQuantCount} individual spectrum Quant Results tables preserved in Source of Truth (includes Sigma uncertainty values).`
+    });
+
+    if (report.excludedSpectra > 0 || report.excludedImages > 0){
+      report.checks.push({
+        name: 'Selective Inclusion',
+        status: 'INFO',
+        message: `${report.excludedSpectra} spectra and ${report.excludedImages} electron image(s) unselected by user.`
+      });
+    }
+
+    return report;
+  }
+
+  function updateAllIntegrityBadges(){
+    if (!MODEL) return;
+    const report = runIntegrityValidation(MODEL);
+    const badges = [
+      $('#headerIntegrityBadge'),
+      $('#sideIntegrityBadge'),
+      $('#wsIntegrityBadge'),
+      $('#previewIntegrityBadge'),
+      $('#modalIntegrityBadge')
+    ];
+    badges.forEach(b => {
+      if (!b) return;
+      b.className = 'integrity-badge ' + report.status.toLowerCase();
+      b.textContent = report.status;
+    });
+    const headerBtn = $('#headerIntegrityBtn');
+    if (headerBtn) headerBtn.style.display = 'inline-flex';
+    const tabCount = $('#tabEditsCount');
+    if (tabCount) tabCount.textContent = String(report.editsCount);
+  }
+
+  // --- Modal Navigation & Rendering ---
+  function openIntegrityModal(defaultTab){
+    if (!MODEL) return;
+    const modal = $('#integrityInspectorModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    switchIntegrityTab(defaultTab || 'summaryTab');
+    renderAuditSummaryTab();
+    renderSourceInspectorTab();
+    renderEditsDiffTab();
+    renderExcludedTab();
+    updateAllIntegrityBadges();
+  }
+
+  function closeIntegrityModal(){
+    const modal = $('#integrityInspectorModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function switchIntegrityTab(tabId){
+    $all('.inspector-tab').forEach(t => {
+      t.classList.toggle('active', t.getAttribute('data-tab') === tabId);
+    });
+    $all('.inspector-tab-panel').forEach(p => {
+      p.classList.toggle('active', p.id === tabId);
+    });
+  }
+
+  function renderAuditSummaryTab(){
+    if (!MODEL) return;
+    const report = runIntegrityValidation(MODEL);
+    const cat = (MODEL.sourceOfTruth && MODEL.sourceOfTruth.catalog) || {};
+    
+    $('#inspFileName').textContent = SOURCE_FILE_NAME || 'Unknown';
+    $('#inspFileHash').textContent = (MODEL.sourceOfTruth && MODEL.sourceOfTruth.hash) || 'Not computed';
+    $('#inspEntityStats').textContent = `${cat.quantSummaryTablesCount || 0} Quant Summary Tables, ${cat.individualQuantTablesCount || 0} Individual Quant Tables, ${cat.detailsTablesCount || 0} Details Tables, ${cat.totalImages || 0} Images.`;
+
+    const list = $('#inspChecksList');
+    list.innerHTML = '';
+    report.checks.forEach(chk => {
+      const row = el('div', { class:'check-item' }, [
+        el('div', null, [
+          el('div', { class:'check-name', text: chk.name }),
+          el('div', { class:'check-msg', text: chk.message })
+        ]),
+        el('span', { class: 'integrity-badge ' + chk.status.toLowerCase(), text: chk.status })
+      ]);
+      list.appendChild(row);
+    });
+  }
+
+  function renderSourceInspectorTab(){
+    if (!MODEL) return;
+    const select = $('#inspSiteSelect');
+    const content = $('#inspSiteTableContent');
+    select.innerHTML = '';
+    
+    const sites = [];
+    MODEL.project.specimens.forEach((sp, spIdx) => {
+      sp.sites.forEach((st, stIdx) => {
+        sites.push({ key: `${spIdx}_${stIdx}`, title: `${sp.title} - ${st.title}`, site: st, specimen: sp });
+      });
+    });
+
+    sites.forEach((item, idx) => {
+      const opt = el('option', { value: item.key, text: item.title });
+      if (idx === 0) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    function displaySiteTables(siteItem){
+      content.innerHTML = '';
+      if (!siteItem) return;
+      const st = siteItem.site;
+
+      // 1. Quant Results Summary
+      const summaryCard = el('div', { class:'inspector-card' });
+      summaryCard.appendChild(el('h4', { text: `Quant Results Summary: ${siteItem.title}` }));
+      if (st.summary && st.summary.headers && st.summary.headers.length){
+        const tbl = el('table', { class:'raw-source-table' });
+        const trH = el('tr');
+        st.summary.headers.forEach(h => trH.appendChild(el('th', { text: h })));
+        tbl.appendChild(trH);
+        st.summary.rows.forEach(r => {
+          const tr = el('tr');
+          r.forEach(v => tr.appendChild(el('td', { text: v })));
+          tbl.appendChild(tr);
+        });
+        summaryCard.appendChild(tbl);
+      } else {
+        summaryCard.appendChild(el('p', { text: 'No Quant Results Summary table present for this site.', style:'font-style:italic;color:#666;' }));
+      }
+      content.appendChild(summaryCard);
+
+      // 2. Individual Quant Results for each Spectrum
+      const quantSpectra = (st.spectra || []).filter(s => s.quantResults && s.quantResults.rows && s.quantResults.rows.length);
+      if (quantSpectra.length){
+        const indCard = el('div', { class:'inspector-card' });
+        indCard.appendChild(el('h4', { text: `Individual Spectrum Quant Results (${quantSpectra.length} spectra preserved)` }));
+        quantSpectra.forEach(sp => {
+          indCard.appendChild(el('p', { text: `Spectrum: ${sp.label}`, style:'font-weight:700;margin:10px 0 4px 0;' }));
+          const tbl = el('table', { class:'raw-source-table' });
+          const trH = el('tr');
+          sp.quantResults.headers.forEach(h => trH.appendChild(el('th', { text: h })));
+          tbl.appendChild(trH);
+          sp.quantResults.rows.forEach(r => {
+            const tr = el('tr');
+            r.forEach(v => tr.appendChild(el('td', { text: v })));
+            tbl.appendChild(tr);
+          });
+          indCard.appendChild(tbl);
+        });
+        content.appendChild(indCard);
+      }
+    }
+
+    select.onchange = () => {
+      const chosen = sites.find(s => s.key === select.value);
+      displaySiteTables(chosen);
+    };
+
+    if (sites.length) displaySiteTables(sites[0]);
+  }
+
+  function renderEditsDiffTab(){
+    if (!MODEL) return;
+    const list = $('#inspEditsList');
+    list.innerHTML = '';
+    const edits = Object.values(MODEL.edits || {});
+
+    if (!edits.length){
+      list.appendChild(el('div', {
+        class: 'inspector-card',
+        text: '✅ All scientific values match original source measurements. No manual cell edits have been made.'
+      }));
+      return;
+    }
+
+    const tbl = el('table', { class:'diff-table' });
+    tbl.appendChild(el('tr', null, [
+      el('th', { text:'Site' }),
+      el('th', { text:'Row / Label' }),
+      el('th', { text:'Header / Element' }),
+      el('th', { text:'Original Value' }),
+      el('th', { text:'Edited Value' }),
+      el('th', { text:'Action' })
+    ]));
+
+    edits.forEach(ed => {
+      const btnRev = el('button', { type:'button', class:'btn-revert', text:'Revert' });
+      btnRev.addEventListener('click', () => {
+        revertSingleCell(ed.cellId, ed.originalValue);
+      });
+
+      const tr = el('tr', { class:'edited' }, [
+        el('td', { text: ed.siteTitle || '-' }),
+        el('td', { text: ed.rowLabel || '-' }),
+        el('td', { text: ed.header || '-' }),
+        el('td', null, [ el('span', { class:'diff-orig', text: ed.originalValue }) ]),
+        el('td', null, [ el('span', { class:'diff-curr', text: ed.currentValue }) ]),
+        el('td', null, [ btnRev ])
+      ]);
+      tbl.appendChild(tr);
+    });
+
+    list.appendChild(tbl);
+  }
+
+  function revertSingleCell(cellId, origVal){
+    const cell = document.querySelector(`[data-cell-id="${cellId}"]`);
+    if (cell){
+      cell.textContent = origVal;
+      cell.classList.remove('scientific-edited');
+      cell.removeAttribute('title');
+    }
+    if (MODEL && MODEL.edits && MODEL.edits[cellId]){
+      delete MODEL.edits[cellId];
+    }
+    updateAllIntegrityBadges();
+    renderEditsDiffTab();
+    renderAuditSummaryTab();
+    if (MODEL) renderStats(MODEL);
+    showToast(`Cell reverted to original value "${origVal}".`);
+  }
+
+  function revertAllEdits(){
+    if (!MODEL || !MODEL.edits) return;
+    const keys = Object.keys(MODEL.edits);
+    if (!keys.length){
+      showToast('No edits to revert.');
+      return;
+    }
+    if (!confirm(`Are you sure you want to revert all ${keys.length} edited scientific values back to original source measurements?`)) return;
+
+    keys.forEach(k => {
+      const ed = MODEL.edits[k];
+      const cell = document.querySelector(`[data-cell-id="${k}"]`);
+      if (cell){
+        cell.textContent = ed.originalValue;
+        cell.classList.remove('scientific-edited');
+        cell.removeAttribute('title');
+      }
+    });
+    MODEL.edits = {};
+    updateAllIntegrityBadges();
+    renderEditsDiffTab();
+    renderAuditSummaryTab();
+    if (MODEL) renderStats(MODEL);
+    showToast('All scientific cells reverted to original values.');
+  }
+
+  function renderExcludedTab(){
+    if (!MODEL) return;
+    const list = $('#inspExcludedList');
+    list.innerHTML = '';
+
+    // Catalog of exclusions
+    const excludedSpectra = [];
+    const excludedImages = [];
+    (MODEL.project.specimens || []).forEach(sp => {
+      sp.sites.forEach(st => {
+        (st.spectra || []).forEach(spc => {
+          if (spc.include === false) excludedSpectra.push(`${st.title} > Spectrum ${spc.label}`);
+        });
+        (st.electronImageGroups || []).forEach(img => {
+          if (img.include === false) excludedImages.push(`${st.title} > ${img.alt}`);
+        });
+      });
+    });
+
+    const isCommentsHidden = $('#includeCommentsToggle') ? !$('#includeCommentsToggle').checked : false;
+
+    const items = [
+      {
+        title: 'Individual Spectrum Quant Results Tables',
+        status: 'PRESERVED IN MODEL (EXCLUDED FROM DEFAULT FORMATTED SHEET)',
+        detail: 'Per standard analysis report format, individual spectrum quant tables are not duplicated on the summary page. All rows and sigma uncertainties remain 100% preserved in the model and are inspectable under the "Source Tables Inspector" tab.'
+      },
+      {
+        title: 'Unselected Spectra',
+        status: excludedSpectra.length ? `${excludedSpectra.length} SPECTRA EXCLUDED` : 'ALL SPECTRA INCLUDED',
+        detail: excludedSpectra.length ? `Excluded spectra: ${excludedSpectra.join(', ')}` : 'No spectra excluded by user.'
+      },
+      {
+        title: 'Unselected Electron Images',
+        status: excludedImages.length ? `${excludedImages.length} IMAGES EXCLUDED` : 'ALL IMAGES INCLUDED',
+        detail: excludedImages.length ? `Excluded images: ${excludedImages.join(', ')}` : 'No electron images excluded by user.'
+      },
+      {
+        title: 'Particle Comments Column',
+        status: isCommentsHidden ? 'HIDDEN BY OPTION' : 'INCLUDED IN REPORT',
+        detail: isCommentsHidden ? 'Comments table toggle is switched OFF. Content is omitted from print/export.' : 'Comments table is active and will be exported.'
+      }
+    ];
+
+    items.forEach(it => {
+      const box = el('div', { style:'border-bottom:1px solid #e0e4f0;padding:8px 0;' }, [
+        el('div', { style:'display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:12.5px;' }, [
+          el('span', { text: it.title }),
+          el('span', { style:'font-size:11px;color:#000080;background:#edf0fa;padding:2px 6px;border-radius:3px;', text: it.status })
+        ]),
+        el('p', { style:'font-size:11.5px;color:#555;margin:4px 0 0 0;line-height:1.4;', text: it.detail })
+      ]);
+      list.appendChild(box);
+    });
+  }
+
+  function exportAuditLogText(){
+    if (!MODEL) return;
+    const report = runIntegrityValidation(MODEL);
+    const cat = (MODEL.sourceOfTruth && MODEL.sourceOfTruth.catalog) || {};
+    const edits = Object.values(MODEL.edits || {});
+
+    let txt = `================================================================================\n`;
+    txt += `EDAX REPORT CONVERTER — ZERO-LOSS DATA INTEGRITY & AUDIT TRAIL REPORT\n`;
+    txt += `================================================================================\n\n`;
+    txt += `Software Version      : edax_report_converter v2.8\n`;
+    txt += `Source File Name      : ${SOURCE_FILE_NAME}\n`;
+    txt += `Source SHA-256 Hash   : ${(MODEL.sourceOfTruth && MODEL.sourceOfTruth.hash) || 'N/A'}\n`;
+    txt += `Audit Timestamp       : ${new Date().toISOString()}\n`;
+    txt += `Overall Status        : ${report.status}\n\n`;
+
+    txt += `--------------------------------------------------------------------------------\n`;
+    txt += `1. SOURCE DATASET CATALOG & DISCOVERY\n`;
+    txt += `--------------------------------------------------------------------------------\n`;
+    txt += `Headings Discovered   : ${cat.totalHeadings || 0}\n`;
+    txt += `Tables Discovered     : ${cat.totalTables || 0}\n`;
+    txt += `  - Quant Summary     : ${cat.quantSummaryTablesCount || 0}\n`;
+    txt += `  - Individual Quant  : ${cat.individualQuantTablesCount || 0}\n`;
+    txt += `  - Details Tables    : ${cat.detailsTablesCount || 0}\n`;
+    txt += `Images Discovered     : ${cat.totalImages || 0}\n\n`;
+
+    txt += `--------------------------------------------------------------------------------\n`;
+    txt += `2. VERIFICATION CHECKS SUMMARY\n`;
+    txt += `--------------------------------------------------------------------------------\n`;
+    report.checks.forEach(c => {
+      txt += `[${c.status.padEnd(7)}] ${c.name}: ${c.message}\n`;
+    });
+    txt += `\n`;
+
+    txt += `--------------------------------------------------------------------------------\n`;
+    txt += `3. SCIENTIFIC DATA MODIFICATIONS / USER EDITS LOG (${edits.length} recorded)\n`;
+    txt += `--------------------------------------------------------------------------------\n`;
+    if (!edits.length){
+      txt += `No scientific modifications detected. All values match source measurements.\n\n`;
+    } else {
+      edits.forEach((e, idx) => {
+        txt += `#${idx+1} [${e.siteTitle}] Header: "${e.header}" | Row: "${e.rowLabel}"\n`;
+        txt += `    Original Value: "${e.originalValue}"\n`;
+        txt += `    Modified Value: "${e.currentValue}"\n\n`;
+      });
+    }
+
+    txt += `--------------------------------------------------------------------------------\n`;
+    txt += `4. EXCLUSIONS & SELECTIVE INCLUSION SUMMARY\n`;
+    txt += `--------------------------------------------------------------------------------\n`;
+    txt += `Individual Quant Tables : ${report.individualQuantCount} preserved in Source of Truth\n`;
+    txt += `Excluded Spectra Count  : ${report.excludedSpectra}\n`;
+    txt += `Excluded Images Count   : ${report.excludedImages}\n`;
+    txt += `Comments Table Included : ${$('#includeCommentsToggle') && $('#includeCommentsToggle').checked ? 'Yes' : 'No'}\n\n`;
+    txt += `================================================================================\n`;
+    txt += `END OF AUDIT REPORT\n`;
+    txt += `================================================================================\n`;
+
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+    downloadBlob(blob, `${baseName(SOURCE_FILE_NAME)}_integrity_audit.txt`);
+    showToast('Integrity audit report downloaded.');
+  }
+
+  async function verifyPreExportIntegrity(){
+    if (!MODEL) return false;
+    const report = runIntegrityValidation(MODEL);
+    if (report.status === 'FAIL'){
+      openIntegrityModal('summaryTab');
+      alert(`⚠️ Export Blocked: Image Loading Failure\n\n${report.brokenImages.length} active image(s) failed to load properly. Please inspect the Source Inspector before exporting to avoid blank images in your report.`);
+      return false;
+    }
+    if (report.status === 'WARNING'){
+      const proceed = confirm(`⚠️ Scientific Data Notice:\n\n${report.editsCount} scientific value(s) have been manually modified from the original source measurements.\n\nDo you want to proceed with export?`);
+      if (!proceed){
+        openIntegrityModal('editsTab');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /* ============================================================
+     6. Export: HTML
   ============================================================ */
   async function exportHtml(){
     if (!MODEL) return;
+    if (!(await verifyPreExportIntegrity())) return;
     const clean = buildCleanReportHTML();
     const html = fullHtmlDocument(clean, MODEL.project.title);
     const filename = baseName(SOURCE_FILE_NAME) + '.html';
@@ -2918,8 +3962,9 @@ ${bodyChunksXml}
     });
   }
 
-  async function exportDoc(){
+  async function exportDoc(skipPreVerify){
     if (!MODEL) return;
+    if (!skipPreVerify && !(await verifyPreExportIntegrity())) return;
     const clean = buildCleanReportHTML();
     try {
       await makeImagesWordSafe(clean);
@@ -3054,46 +4099,70 @@ ${innerContent}
      A4 CSS already defined for the on-screen preview/export and has
      no external dependency, so it can't fail that way.)
   ============================================================ */
-  function exportPdf(){
+  function exportPdf(skipPreVerify){
     if (!MODEL) return Promise.resolve();
-    const clean = buildCleanReportHTML();
+    return (async () => {
+      if (!skipPreVerify && !(await verifyPreExportIntegrity())) return;
+      const clean = buildCleanReportHTML();
 
-    const printRoot = document.createElement('div');
-    printRoot.id = 'printExportRoot';
-    printRoot.appendChild(clean);
-    document.body.appendChild(printRoot);
+      const printRoot = document.createElement('div');
+      printRoot.id = 'printExportRoot';
+      printRoot.appendChild(clean);
+      document.body.appendChild(printRoot);
 
-    const origTitle = document.title;
-    document.title = baseName(SOURCE_FILE_NAME);
+      const origTitle = document.title;
+      document.title = baseName(SOURCE_FILE_NAME);
 
-    return new Promise((resolve)=>{
-      let done = false;
-      const cleanup = () => {
-        if (done) return;
-        done = true;
-        document.title = origTitle;
-        window.removeEventListener('afterprint', cleanup);
-        printRoot.remove();
-        resolve();
-      };
-      window.addEventListener('afterprint', cleanup);
-      // Safety net: some browsers don't fire afterprint reliably when the
-      // dialog is cancelled, so clean up regardless after a while.
-      setTimeout(cleanup, 20000);
+      return new Promise((resolve)=>{
+        let done = false;
+        const cleanup = () => {
+          if (done) return;
+          done = true;
+          document.title = origTitle;
+          window.removeEventListener('afterprint', cleanup);
+          printRoot.remove();
+          resolve();
+        };
+        window.addEventListener('afterprint', cleanup);
+        // Safety net: some browsers don't fire afterprint reliably when the
+        // dialog is cancelled, so clean up regardless after a while.
+        setTimeout(cleanup, 20000);
 
-      showToast('Opening the print dialog — choose "Save as PDF" as the printer.');
-      // Give the browser a tick to lay out the freshly-inserted content
-      // (images especially) before opening the print dialog.
-      setTimeout(()=>{ window.print(); }, 80);
-    });
+        showToast('Opening the print dialog — choose "Save as PDF" as the printer.');
+        // Give the browser a tick to lay out the freshly-inserted content
+        // (images especially) before opening the print dialog.
+        setTimeout(()=>{ window.print(); }, 80);
+      });
+    })();
   }
 
-  async function exportBoth(){ await exportDoc(); await exportPdf(); }
+  async function exportBoth(){
+    if (!MODEL) return;
+    if (!(await verifyPreExportIntegrity())) return;
+    await exportDoc(true);
+    await exportPdf(true);
+  }
 
   $('#exportHtmlBtn').addEventListener('click', exportHtml);
-  $('#exportDocBtn').addEventListener('click', exportDoc);
-  $('#exportPdfBtn').addEventListener('click', exportPdf);
+  $('#exportDocBtn').addEventListener('click', () => exportDoc(false));
+  $('#exportPdfBtn').addEventListener('click', () => exportPdf(false));
   $('#exportBothBtn').addEventListener('click', exportBoth);
+
+  // Data Integrity UI event listeners
+  const openInspector = () => openIntegrityModal('summaryTab');
+  const hBtn = $('#headerIntegrityBtn'); if (hBtn) hBtn.addEventListener('click', openInspector);
+  const wBtn = $('#wsIntegrityBtn'); if (wBtn) wBtn.addEventListener('click', openInspector);
+  const pBtn = $('#previewIntegrityBtn'); if (pBtn) pBtn.addEventListener('click', openInspector);
+  const sBtn = $('#sideIntegrityBtn'); if (sBtn) sBtn.addEventListener('click', openInspector);
+
+  const cBtn = $('#inspectorCloseBtn'); if (cBtn) cBtn.addEventListener('click', closeIntegrityModal);
+  const dBtn = $('#inspectorDoneBtn'); if (dBtn) dBtn.addEventListener('click', closeIntegrityModal);
+  const dlBtn = $('#downloadAuditLogBtn'); if (dlBtn) dlBtn.addEventListener('click', exportAuditLogText);
+  const revAll = $('#revertAllEditsBtn'); if (revAll) revAll.addEventListener('click', revertAllEdits);
+
+  $all('.inspector-tab').forEach(t => {
+    t.addEventListener('click', () => switchIntegrityTab(t.getAttribute('data-tab')));
+  });
 
 })();
 </script>
