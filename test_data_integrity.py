@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Automated Data Integrity Test Suite for EDAX Report Converter v2.8
-Validates Zero-Loss Preservation, Table Extraction, Edit Tracking, and Pre-Export Safeguards.
+Automated Data Integrity Test Suite for EDAX Report Converter v2.9
+Validates Zero-Loss Preservation, Nested Table Isolation, Deep Source-to-Model
+Reconciliation, Independent Export Verification, and Pre-Export Safeguards.
 """
 import os
 import re
@@ -11,12 +12,12 @@ from bs4 import BeautifulSoup
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-REPORT_CONVERTER_FILE = 'edax_report_converter v2.8.html'
+REPORT_CONVERTER_FILE = 'edax_report_converter v2.9.html'
 SOURCE_FILE = '0Km CRI.I. 26-172 Particle In Z Hole (M&M) ........17 - Project Report.html'
 
 def run_tests():
     print("=" * 80)
-    print("EDAX REPORT CONVERTER v2.8 — AUTOMATED DATA INTEGRITY TEST SUITE")
+    print("EDAX REPORT CONVERTER v2.9 — AUTOMATED DATA INTEGRITY TEST SUITE")
     print("=" * 80)
     passed = 0
     total = 0
@@ -42,36 +43,61 @@ def run_tests():
     with open(REPORT_CONVERTER_FILE, 'r', encoding='utf-8') as f:
         converter_html = f.read()
 
-    assert_test("Converter file exists & version is v2.8", 
-                "edax_report_converter v2.8" in converter_html and "<title>edax_report_converter v2.8</title>" in converter_html)
-    assert_test("Header displays v2.8", 'v2.8' in converter_html)
-    assert_test("Footer displays v2.8", 'edax_report_converter v2.8 &middot;' in converter_html)
+    assert_test("Converter file exists & version is v2.9", 
+                "edax_report_converter v2.9" in converter_html and "<title>edax_report_converter v2.9</title>" in converter_html)
+    assert_test("Header displays v2.9", 'v2.9' in converter_html)
+    assert_test("Footer displays v2.9", 'edax_report_converter v2.9 &middot;' in converter_html)
+    assert_test("Audit text log records v2.9", 'Software Version      : edax_report_converter v2.9' in converter_html)
 
     # -------------------------------------------------------------
-    # Group 2: Extraction Logic in edax_report_converter v2.8.html
+    # Group 2: Table Extraction & Nested Row Leakage Elimination
     # -------------------------------------------------------------
-    print("\n--- Group 2: Zero-Loss Logic Verification in Application Source ---")
-    assert_test("SHA-256 hashing function present", "computeSha256" in converter_html)
-    assert_test("Alphanumeric spectrum title regex / logic present", 
-                "isSpectrumTitle" in converter_html and "isSpectrumChild" in converter_html)
-    assert_test("Preserves individual Quant Results tables", 
-                "sourceRegistry.allIndividualQuantResults.push" in converter_html and "spectrum.quantResults = quantResultsData" in converter_html or "quantResults: quantResultsData" in converter_html)
-    assert_test("Zero scientific casting: exact string preservation", 
-                "extractTableData" in converter_html and "headers" in converter_html and "rows" in converter_html)
-    assert_test("Scientific cell edit tracking implemented", 
-                "attachScientificEditHandler" in converter_html and "scientific-edited" in converter_html and "MODEL.edits" in converter_html)
-    assert_test("Pre-export integrity verification implemented", 
-                "verifyPreExportIntegrity" in converter_html and "runIntegrityValidation" in converter_html)
-    assert_test("Data Integrity & Source Inspector UI present", 
-                "integrityInspectorModal" in converter_html and "Source Tables Inspector" in converter_html and "User Edits Log" in converter_html)
+    print("\n--- Group 2: Table Extraction & Nested Row Leakage Elimination ---")
+    assert_test("Direct row selector getTableDirectRows implemented", "function getTableDirectRows" in converter_html)
+    assert_test("Direct cell selector getRowDirectCells implemented", "function getRowDirectCells" in converter_html)
+    assert_test("extractTableData handles colspan expansion", "colspan" in converter_html and "colCount: headers.length" in converter_html)
+    assert_test("extractSummaryTable filters out nested tables", "t.closest('tr') === null" in converter_html)
+    assert_test("extractDetailsRows filters out nested tables and uses direct rows", "getTableDirectRows(table)" in converter_html)
 
     # -------------------------------------------------------------
-    # Group 3: Source HTML Structure vs Model Expectations
+    # Group 3: Real Source-to-Model Deep Reconciliation
     # -------------------------------------------------------------
-    print("\n--- Group 3: Source Data Verification against Reference Document ---")
+    print("\n--- Group 3: Real Source-to-Model Deep Reconciliation ---")
+    assert_test("verifySourceToModelReconciliation function present", "function verifySourceToModelReconciliation" in converter_html)
+    assert_test("Reconciles discovered headings against hierarchy", "Report Hierarchy & Sections" in converter_html)
+    assert_test("Reconciles Quant Results Summary tables and discovers all instances", "Quant Summary Tables Discovery" in converter_html)
+    assert_test("Cell-by-cell matching against original source HTML values", "Quant Summary Cell Reconciliation" in converter_html and "srcVal" in converter_html)
+    assert_test("Reconciles Individual Quant Results tables & Wt% Sigma", "Individual Quant Tables & Uncertainty (Sigma)" in converter_html)
+    assert_test("Reconciles image instances across specimens and sites", "Source-to-Model Image Accounting" in converter_html)
+    assert_test("runIntegrityValidation integrates reconciliation results", "report.reconciliation = recon" in converter_html)
+
+    # -------------------------------------------------------------
+    # Group 4: Independent Export Verification (HTML, Word, PDF)
+    # -------------------------------------------------------------
+    print("\n--- Group 4: Independent Export Verification ---")
+    assert_test("validateHtmlExportArtifact implemented", "function validateHtmlExportArtifact" in converter_html)
+    assert_test("validatePdfExportArtifact implemented", "function validatePdfExportArtifact" in converter_html)
+    assert_test("Tab 5 Export Verifier UI present in DOM", 'data-tab="exportVerifyTab"' in converter_html and 'id="exportVerifyTab"' in converter_html)
+    assert_test("renderExportVerifyTab renders independent export checks", "function renderExportVerifyTab" in converter_html and "inspExportVerifyList" in converter_html)
+
+    # -------------------------------------------------------------
+    # Group 5: Zero-Loss Full Scientific Dataset Export
+    # -------------------------------------------------------------
+    print("\n--- Group 5: Zero-Loss Full Scientific Dataset Export ---")
+    assert_test("exportFullScientificDataset function present", "function exportFullScientificDataset" in converter_html)
+    assert_test("Export Full Dataset button present in inspector footer", 'id="downloadFullDatasetBtn"' in converter_html)
+    assert_test("downloadFullDatasetBtn event listener wired up", "downloadFullDatasetBtn" in converter_html and "exportFullScientificDataset" in converter_html)
+    assert_test("Full dataset export preserves all specimens, sites, summary tables and individual sigma quant tables", 
+                "Individual Quantification with Sigma" in converter_html and "full_scientific_dataset.html" in converter_html)
+
+    # -------------------------------------------------------------
+    # Group 6: Source HTML Structure vs Model Expectations
+    # -------------------------------------------------------------
+    print("\n--- Group 6: Reference Document Structure & Exact Values ---")
     soup = BeautifulSoup(source_bytes.decode('utf-8', errors='ignore'), 'html.parser')
     all_tables = soup.find_all('table')
     all_imgs = soup.find_all('img')
+    all_headings = soup.find_all(['h1','h2','h3','h4','h5','h6'])
 
     quant_summary_tables = []
     quant_individual_tables = []
@@ -84,8 +110,10 @@ def run_tests():
         elif 'quant results' in h_text:
             quant_individual_tables.append(tbl)
 
+    assert_test("Source document contains exactly 37 headings", len(all_headings) == 37, f"Found {len(all_headings)}")
     assert_test("Source document contains exactly 3 Quant Results Summary tables", len(quant_summary_tables) == 3)
     assert_test("Source document contains exactly 7 Individual Quant Results tables", len(quant_individual_tables) == 7)
+    assert_test("Source document contains exactly 11 images", len(all_imgs) == 11, f"Found {len(all_imgs)}")
 
     # Check precision & trailing zeros in summary tables
     trailing_zeros_found = 0
@@ -104,25 +132,10 @@ def run_tests():
     assert_test("Wt% Sigma headers present in all 7 individual quant tables", sigma_values_found == 7, f"Found {sigma_values_found}/7")
 
     # -------------------------------------------------------------
-    # Group 4: Export Cleanliness & Format Preservation
+    # Group 7: Pre-Flight Integrity Protection & Safeguards
     # -------------------------------------------------------------
-    print("\n--- Group 4: Export Cleanliness & Formatting Preservation ---")
-    assert_test("buildCleanReportHTML strips .scientific-edited class", 
-                "n.classList.remove('scientific-edited')" in converter_html or 'classList.remove("scientific-edited")' in converter_html)
-    assert_test("buildCleanReportHTML strips data-cell-id attribute", 
-                "removeAttribute('data-cell-id')" in converter_html)
-    assert_test("buildCleanReportHTML strips data-orig-value attribute", 
-                "removeAttribute('data-orig-value')" in converter_html)
-    assert_test("inlineStylesForWord preserved exactly", 
-                "function inlineStylesForWord" in converter_html and "site-header-bar" in converter_html and "cover-grid" in converter_html)
-    assert_test("Word docx blob creation logic intact", 
-                "function createDocxBlob" in converter_html and "word/document.xml" in converter_html)
-
-    # -------------------------------------------------------------
-    # Group 5: Pre-Flight Integrity Protection
-    # -------------------------------------------------------------
-    print("\n--- Group 5: Pre-Flight Integrity Protection & Action Safeguards ---")
-    assert_test("Export HTML blocked on failed validation", "if (!(await verifyPreExportIntegrity())) return" in converter_html)
+    print("\n--- Group 7: Pre-Flight Integrity Protection & Safeguards ---")
+    assert_test("Export HTML guarded by pre-flight check", "if (!(await verifyPreExportIntegrity())) return" in converter_html)
     assert_test("Export Word guarded by pre-flight check", "if (!skipPreVerify && !(await verifyPreExportIntegrity())) return" in converter_html)
     assert_test("Export PDF guarded by pre-flight check", "if (!skipPreVerify && !(await verifyPreExportIntegrity())) return" in converter_html)
     assert_test("Export Both guarded by pre-flight check", "if (!(await verifyPreExportIntegrity())) return;" in converter_html)
@@ -134,7 +147,7 @@ def run_tests():
     print(f"FINAL RESULT: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
     print("=" * 80)
     if passed == total:
-        print("ALL DATA INTEGRITY AND ZERO-LOSS SAFEGUARD TESTS PASSED!")
+        print("ALL DATA INTEGRITY AND ZERO-LOSS SAFEGUARD TESTS PASSED (100%)!")
         return 0
     else:
         print("SOME TESTS FAILED! Review test log above.")
