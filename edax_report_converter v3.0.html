@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>edax_report_converter v2.9</title>
+<title>edax_report_converter v3.0</title>
 <style>
   :root{
     --navy:#000080;
@@ -774,7 +774,7 @@
 <header class="app-header">
   <div class="brand">
     <span class="mark"></span>
-    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v2.9</span></h1>
+    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v3.0</span></h1>
     <span class="subtitle">Project Report &rarr; Formatted Summary Report</span>
   </div>
   <div class="actions" id="headerActions">
@@ -938,7 +938,7 @@
 
 </main>
 
-<footer class="app-foot">edax_report_converter v2.9 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
+<footer class="app-foot">edax_report_converter v3.0 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
 
 <div class="toast" id="toast"></div>
 
@@ -1175,9 +1175,9 @@
     const root = doc.querySelector('main') || doc.body;
     if (!root) throw new Error('This does not look like a valid HTML report (no <body> found).');
 
-    // Discovery audit of all source elements
+    // Discovery audit of all source elements (excluding footer/header vendor logos)
     const allTables = $all('table', doc);
-    const allImages = $all('img', doc);
+    const allImages = $all('img', root).filter(im => !im.closest('footer') && !im.closest('header') && !im.classList.contains('logo') && (im.getAttribute('alt') || '').toLowerCase() !== 'logo');
     const allHeadings = $all('h1, h2, h3, h4, h5, h6', doc);
     let quantSummaryTablesCount = 0;
     let individualQuantTablesCount = 0;
@@ -3027,7 +3027,8 @@ ${bodyEl.innerHTML}
 
     try {
       const doc = new DOMParser().parseFromString(model.sourceOfTruth.rawHtml, 'text/html');
-      const srcImages = Array.from(doc.querySelectorAll('img'));
+      const srcRoot = doc.querySelector('main') || doc.body;
+      const srcImages = Array.from(srcRoot.querySelectorAll('img')).filter(im => !im.closest('footer') && !im.closest('header') && !im.classList.contains('logo') && (im.getAttribute('alt') || '').toLowerCase() !== 'logo');
       const srcHeadings = Array.from(doc.querySelectorAll('h1, h2, h3, h4, h5, h6'));
 
       // 1. Structure & Headings Check
@@ -3169,20 +3170,20 @@ ${bodyEl.innerHTML}
         res.checks.push({
           name: 'Source-to-Model Image Accounting',
           status: 'PASS',
-          message: `All ${extractedImgsCount} source images (electron + spectrum) accounted for without unexpected omission.`
+          message: `All ${extractedImgsCount} scientific source images (electron + spectrum) accounted for without unexpected omission.`
         });
       } else if (extractedImgsCount < srcImages.length){
         res.status = 'WARNING';
         res.checks.push({
           name: 'Source-to-Model Image Accounting',
           status: 'WARNING',
-          message: `Extracted ${extractedImgsCount} image(s), source report contained ${srcImages.length} images.`
+          message: `Extracted ${extractedImgsCount} scientific image(s), source report contained ${srcImages.length} images.`
         });
       } else {
         res.checks.push({
           name: 'Source-to-Model Image Accounting',
           status: 'PASS',
-          message: `${extractedImgsCount} image instances accounted for across specimens and sites.`
+          message: `${extractedImgsCount} scientific image instances accounted for across specimens and sites.`
         });
       }
 
@@ -3894,7 +3895,7 @@ ${bodyEl.innerHTML}
     let txt = `================================================================================\n`;
     txt += `EDAX REPORT CONVERTER — ZERO-LOSS DATA INTEGRITY & AUDIT TRAIL REPORT\n`;
     txt += `================================================================================\n\n`;
-    txt += `Software Version      : edax_report_converter v2.9\n`;
+    txt += `Software Version      : edax_report_converter v3.0\n`;
     txt += `Source File Name      : ${SOURCE_FILE_NAME}\n`;
     txt += `Source SHA-256 Hash   : ${(MODEL.sourceOfTruth && MODEL.sourceOfTruth.hash) || 'N/A'}\n`;
     txt += `Audit Timestamp       : ${new Date().toISOString()}\n`;

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Automated Data Integrity Test Suite for EDAX Report Converter v2.9
+Automated Data Integrity Test Suite for EDAX Report Converter v3.0
 Validates Zero-Loss Preservation, Nested Table Isolation, Deep Source-to-Model
-Reconciliation, Independent Export Verification, and Pre-Export Safeguards.
+Reconciliation, Independent Export Verification, Image Accounting (excluding vendor logos),
+and Pre-Export Safeguards.
 """
 import os
 import re
@@ -12,12 +13,12 @@ from bs4 import BeautifulSoup
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-REPORT_CONVERTER_FILE = 'edax_report_converter v2.9.html'
+REPORT_CONVERTER_FILE = 'edax_report_converter v3.0.html'
 SOURCE_FILE = '0Km CRI.I. 26-172 Particle In Z Hole (M&M) ........17 - Project Report.html'
 
 def run_tests():
     print("=" * 80)
-    print("EDAX REPORT CONVERTER v2.9 — AUTOMATED DATA INTEGRITY TEST SUITE")
+    print("EDAX REPORT CONVERTER v3.0 — AUTOMATED DATA INTEGRITY TEST SUITE")
     print("=" * 80)
     passed = 0
     total = 0
@@ -43,11 +44,11 @@ def run_tests():
     with open(REPORT_CONVERTER_FILE, 'r', encoding='utf-8') as f:
         converter_html = f.read()
 
-    assert_test("Converter file exists & version is v2.9", 
-                "edax_report_converter v2.9" in converter_html and "<title>edax_report_converter v2.9</title>" in converter_html)
-    assert_test("Header displays v2.9", 'v2.9' in converter_html)
-    assert_test("Footer displays v2.9", 'edax_report_converter v2.9 &middot;' in converter_html)
-    assert_test("Audit text log records v2.9", 'Software Version      : edax_report_converter v2.9' in converter_html)
+    assert_test("Converter file exists & version is v3.0", 
+                "edax_report_converter v3.0" in converter_html and "<title>edax_report_converter v3.0</title>" in converter_html)
+    assert_test("Header displays v3.0", 'v3.0' in converter_html)
+    assert_test("Footer displays v3.0", 'edax_report_converter v3.0 &middot;' in converter_html)
+    assert_test("Audit text log records v3.0", 'Software Version      : edax_report_converter v3.0' in converter_html)
 
     # -------------------------------------------------------------
     # Group 2: Table Extraction & Nested Row Leakage Elimination
@@ -60,15 +61,17 @@ def run_tests():
     assert_test("extractDetailsRows filters out nested tables and uses direct rows", "getTableDirectRows(table)" in converter_html)
 
     # -------------------------------------------------------------
-    # Group 3: Real Source-to-Model Deep Reconciliation
+    # Group 3: Real Source-to-Model Deep Reconciliation & Image Accounting
     # -------------------------------------------------------------
-    print("\n--- Group 3: Real Source-to-Model Deep Reconciliation ---")
+    print("\n--- Group 3: Real Source-to-Model Deep Reconciliation & Image Accounting ---")
     assert_test("verifySourceToModelReconciliation function present", "function verifySourceToModelReconciliation" in converter_html)
     assert_test("Reconciles discovered headings against hierarchy", "Report Hierarchy & Sections" in converter_html)
     assert_test("Reconciles Quant Results Summary tables and discovers all instances", "Quant Summary Tables Discovery" in converter_html)
     assert_test("Cell-by-cell matching against original source HTML values", "Quant Summary Cell Reconciliation" in converter_html and "srcVal" in converter_html)
     assert_test("Reconciles Individual Quant Results tables & Wt% Sigma", "Individual Quant Tables & Uncertainty (Sigma)" in converter_html)
-    assert_test("Reconciles image instances across specimens and sites", "Source-to-Model Image Accounting" in converter_html)
+    assert_test("Scientific image filtering ignores footer/header vendor logos", 
+                "!im.closest('footer')" in converter_html and "!im.classList.contains('logo')" in converter_html)
+    assert_test("Reconciles exact scientific images across specimens and sites", "Source-to-Model Image Accounting" in converter_html)
     assert_test("runIntegrityValidation integrates reconciliation results", "report.reconciliation = recon" in converter_html)
 
     # -------------------------------------------------------------
@@ -91,13 +94,16 @@ def run_tests():
                 "Individual Quantification with Sigma" in converter_html and "full_scientific_dataset.html" in converter_html)
 
     # -------------------------------------------------------------
-    # Group 6: Source HTML Structure vs Model Expectations
+    # Group 6: Reference Document Structure & Exact Values
     # -------------------------------------------------------------
     print("\n--- Group 6: Reference Document Structure & Exact Values ---")
     soup = BeautifulSoup(source_bytes.decode('utf-8', errors='ignore'), 'html.parser')
     all_tables = soup.find_all('table')
     all_imgs = soup.find_all('img')
     all_headings = soup.find_all(['h1','h2','h3','h4','h5','h6'])
+    
+    # Filter scientific images (excluding footer vendor logo)
+    scientific_imgs = [img for img in all_imgs if not (img.find_parent('footer') or img.get('alt') == 'Logo' or 'logo' in img.get('class', []))]
 
     quant_summary_tables = []
     quant_individual_tables = []
@@ -113,7 +119,8 @@ def run_tests():
     assert_test("Source document contains exactly 37 headings", len(all_headings) == 37, f"Found {len(all_headings)}")
     assert_test("Source document contains exactly 3 Quant Results Summary tables", len(quant_summary_tables) == 3)
     assert_test("Source document contains exactly 7 Individual Quant Results tables", len(quant_individual_tables) == 7)
-    assert_test("Source document contains exactly 11 images", len(all_imgs) == 11, f"Found {len(all_imgs)}")
+    assert_test("Source document contains 11 total images (10 scientific + 1 footer logo)", len(all_imgs) == 11, f"Found {len(all_imgs)}")
+    assert_test("Source document contains exactly 10 scientific images (3 electron + 7 spectra)", len(scientific_imgs) == 10, f"Found {len(scientific_imgs)}")
 
     # Check precision & trailing zeros in summary tables
     trailing_zeros_found = 0
