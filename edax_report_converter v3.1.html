@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>edax_report_converter v3.0</title>
+<title>edax_report_converter v3.1</title>
 <style>
   :root{
     --navy:#000080;
@@ -774,7 +774,7 @@
 <header class="app-header">
   <div class="brand">
     <span class="mark"></span>
-    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v3.0</span></h1>
+    <h1>EDX Report Converter <span style="font-size:12px;font-weight:500;opacity:0.85;">v3.1</span></h1>
     <span class="subtitle">Project Report &rarr; Formatted Summary Report</span>
   </div>
   <div class="actions" id="headerActions">
@@ -860,6 +860,10 @@
           <input type="checkbox" id="includeCommentsToggle" checked />
           <span>Include Comments table</span>
         </label>
+        <label class="opt-check-line" style="margin-top:6px;">
+          <input type="checkbox" id="includeAllSpectraToggle" />
+          <span>Include all spectra images</span>
+        </label>
         <div class="opt-field">
           <label for="preparedBySelect">Prepared by</label>
           <select id="preparedBySelect">
@@ -938,7 +942,7 @@
 
 </main>
 
-<footer class="app-foot">edax_report_converter v3.0 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
+<footer class="app-foot">edax_report_converter v3.1 &middot; Runs entirely in your browser &mdash; nothing is uploaded to a server.</footer>
 
 <div class="toast" id="toast"></div>
 
@@ -1679,7 +1683,7 @@
   }
 
   function renderImageSlot(item, kind){
-    const slot = el('div', { class:'img-slot', 'data-id': item.id });
+    const slot = el('div', { class:'img-slot', 'data-id': item.id, 'data-kind': kind });
     const check = el('input', { type:'checkbox', class:'chk-box' });
     check.checked = item.include !== false;
     if (!check.checked){
@@ -1688,6 +1692,10 @@
     check.addEventListener('change', ()=>{
       item.include = check.checked;
       slot.classList.toggle('excluded', !check.checked);
+      if (kind === 'spectrum'){
+        syncIncludeAllSpectraToggle();
+      }
+      updateAllIntegrityBadges();
     });
     const overlay = el('label', { class:'sel-overlay' }, [
       check,
@@ -1741,6 +1749,22 @@
     }
 
     return col;
+  }
+
+  function syncIncludeAllSpectraToggle(){
+    const toggle = $('#includeAllSpectraToggle');
+    if (!toggle || !MODEL) return;
+    let allIncluded = true;
+    let totalSpectra = 0;
+    (MODEL.project.specimens || []).forEach(sp => {
+      (sp.sites || []).forEach(st => {
+        (st.spectra || []).forEach(spc => {
+          totalSpectra++;
+          if (spc.include === false) allIncluded = false;
+        });
+      });
+    });
+    toggle.checked = totalSpectra > 0 && allIncluded;
   }
 
   // ---- Particle "Comment" assessment box (right column) ----
@@ -1804,12 +1828,25 @@
     cbCheck.addEventListener('change', ()=>{
       box.classList.toggle('excluded', !cbCheck.checked);
     });
+
+    const copyBtn = el('button', { type:'button', class:'copy-btn', text:'Copy from previous site' });
+    const fovBtn = el('button', {
+      type: 'button',
+      class: 'copy-btn auto-fov-btn',
+      style: 'margin-left:6px;',
+      text: 'Auto-fill FOV \u00b5m',
+      title: 'Auto-populate Length and Width from first Electron Image field of view dimensions'
+    });
+
     const title = el('div', { class:'cb-title' }, [
       el('label', { class:'cb-toggle-label' }, [
         cbCheck,
         el('span', { text:'Comment:' })
       ]),
-      el('button', { type:'button', class:'copy-btn', text:'Copy from previous site' })
+      el('div', { style:'display:flex;gap:5px;align-items:center;' }, [
+        copyBtn,
+        fovBtn
+      ])
     ]);
     box.appendChild(title);
 
@@ -1826,12 +1863,83 @@
     });
     box.appendChild(table);
 
-    title.querySelector('.copy-btn').addEventListener('click', ()=>{
+    // Safe row-by-row and photo copying without destroying or detaching the table DOM node
+    copyBtn.addEventListener('click', ()=>{
       const prev = document.querySelector(`.comment-box[data-specimen="${specimenIdx}"][data-site="${siteIdx-1}"]`);
       if (!prev){ showToast('No previous site in this specimen to copy from.', true); return; }
       const prevTable = prev.querySelector('table.comment-table');
-      table.parentNode.replaceChild(prevTable.cloneNode(true), table);
+      if (!prevTable){ showToast('Previous site table not found.', true); return; }
+
+      const prevRows = Array.from(prevTable.querySelectorAll('tr'));
+      const currRows = Array.from(table.querySelectorAll('tr'));
+
+      prevRows.forEach((pRow, idx) => {
+        const cRow = currRows[idx];
+        if (!cRow) return;
+
+        const pLabel = pRow.querySelector('.c-label');
+        const cLabel = cRow.querySelector('.c-label');
+        if (pLabel && cLabel && cleanText(pLabel.textContent) !== cleanText(cLabel.textContent)){
+          cLabel.textContent = pLabel.textContent;
+        }
+
+        const pVal = pRow.querySelector('.c-value');
+        const cVal = cRow.querySelector('.c-value');
+        if (!pVal || !cVal) return;
+
+        // Check if this is the photo field row
+        const pGrid = pVal.querySelector('.photo-mini-grid');
+        const cGrid = cVal.querySelector('.photo-mini-grid');
+        if (pGrid && cGrid){
+          const pPhotos = Array.from(pGrid.querySelectorAll('.photo-mini'));
+          pPhotos.forEach(pm => {
+            const cloned = pm.cloneNode(true);
+            const remBtn = cloned.querySelector('.pm-remove');
+            if (remBtn){
+              remBtn.addEventListener('click', () => cloned.remove());
+            }
+            cGrid.appendChild(cloned);
+          });
+        } else {
+          cVal.textContent = pVal.textContent;
+        }
+      });
+
       showToast('Copied particle details from the previous site.');
+    });
+
+    // Auto-fill FOV µm button handler
+    fovBtn.addEventListener('click', ()=>{
+      const imgGroup = site.electronImageGroups && site.electronImageGroups[0];
+      if (!imgGroup || !imgGroup.detailsRows || !imgGroup.detailsRows.length){
+        showToast('No electron image metadata found for this site.', true);
+        return;
+      }
+      const wVal = extractMicronValue(imgGroup.detailsRows, 'Image Width');
+      const hVal = extractMicronValue(imgGroup.detailsRows, 'Image Height');
+      if (!wVal && !hVal){
+        showToast('Image Width/Height in \u00b5m not found in metadata.', true);
+        return;
+      }
+      const rows = Array.from(table.querySelectorAll('tr'));
+      let filled = 0;
+      rows.forEach(r => {
+        const lbl = cleanText((r.querySelector('.c-label') || {}).textContent || '');
+        const valCell = r.querySelector('.c-value');
+        if (!valCell) return;
+        if (/length\s*in/i.test(lbl) && wVal){
+          valCell.textContent = wVal;
+          filled++;
+        } else if (/width\s*in/i.test(lbl) && hVal){
+          valCell.textContent = hVal;
+          filled++;
+        }
+      });
+      if (filled > 0){
+        showToast(`Auto-filled FOV dimensions: Length=${wVal || '-'}, Width=${hVal || '-'}`);
+      } else {
+        showToast('Length/Width rows not found in table.', true);
+      }
     });
 
     box.dataset.specimen = specimenIdx;
@@ -1864,6 +1972,15 @@
     l3.appendChild(el('span', { contenteditable:'true', text: site.title }));
     leftBox.appendChild(l3);
 
+    // If Project details rows contain Notes or other source metadata, surface them
+    const projNotesRow = (MODEL.project && MODEL.project.detailsRows || []).find(r => /note/i.test(r.label));
+    if (projNotesRow && projNotesRow.value){
+      const lNote = el('div', { class:'ln' });
+      lNote.appendChild(document.createTextNode('Project Notes: '));
+      lNote.appendChild(el('span', { contenteditable:'true', text: projNotesRow.value }));
+      leftBox.appendChild(lNote);
+    }
+
     const rightBox = el('div', { class:'info-box' });
     const r1 = el('div', { class:'ln' });
     r1.appendChild(document.createTextNode('Sample: '));
@@ -1879,6 +1996,15 @@
     r3.appendChild(document.createTextNode('ID: '));
     r3.appendChild(echoField('specimenId_' + specimenIdx, '', 'span'));
     rightBox.appendChild(r3);
+
+    // If Specimen details rows contain Notes or other source metadata, surface them
+    const specNotesRow = (sp && sp.detailsRows || []).find(r => /note/i.test(r.label));
+    if (specNotesRow && specNotesRow.value){
+      const rNote = el('div', { class:'ln' });
+      rNote.appendChild(document.createTextNode('Specimen Notes: '));
+      rNote.appendChild(el('span', { contenteditable:'true', text: specNotesRow.value }));
+      rightBox.appendChild(rNote);
+    }
 
     return twoColTable(leftBox, rightBox, 'twocol info-row');
   }
@@ -2327,16 +2453,310 @@
     return sheet;
   }
 
+  let CACHED_COVER_DATA = {};
+
+  function extractCoverSheetData(root){
+    const data = Object.assign({}, CACHED_COVER_DATA);
+    if (!root) return data;
+
+    function findValByLabel(table, labelMatcher){
+      if (!table) return null;
+      const cells = $all('td', table);
+      for (let i = 0; i < cells.length; i++){
+        const c = cells[i];
+        if (labelMatcher(cleanText(c.textContent))){
+          if (c.nextElementSibling && c.nextElementSibling.tagName === 'TD'){
+            return c.nextElementSibling;
+          }
+        }
+      }
+      return null;
+    }
+
+    function getCheckboxState(table, labelText){
+      if (!table) return null;
+      const lines = $all('.chk-line', table);
+      for (const line of lines){
+        if (cleanText(line.textContent).toLowerCase().includes(labelText.toLowerCase())){
+          const cb = line.querySelector('input[type="checkbox"]');
+          return cb ? cb.checked : null;
+        }
+      }
+      return null;
+    }
+
+    const cover1 = root.querySelector('#coverSheet') || root.querySelector('#investigationCoverSheet1');
+    if (cover1){
+      const tbl = cover1.querySelector('table');
+      if (tbl){
+        const rd = findValByLabel(tbl, t => /^Report\s*Date/i.test(t));
+        if (rd) data.reportDate = rd.textContent.replace(/^:\s*/, '');
+        const rn = findValByLabel(tbl, t => /^Report\s*No/i.test(t));
+        if (rn) data.reportNo = rn.textContent.replace(/^:\s*/, '');
+
+        const pCb = getCheckboxState(tbl, 'Production');
+        if (pCb !== null) data.production = pCb;
+        const zCb = getCheckboxState(tbl, '0 KM') ?? getCheckboxState(tbl, '0 Km');
+        if (zCb !== null) data.zeroKm = zCb;
+        const iCb = getCheckboxState(tbl, 'Investigation');
+        if (iCb !== null) data.investigation = iCb;
+        const fCb = getCheckboxState(tbl, 'Field');
+        if (fCb !== null) data.field = fCb;
+
+        const ib = findValByLabel(tbl, t => /^Issued\s*By/i.test(t));
+        if (ib) data.issuedBy = ib.textContent.replace(/^:\s*/, '');
+        const dist = findValByLabel(tbl, t => /^Distribution/i.test(t));
+        if (dist) data.distribution = dist.textContent.replace(/^:\s*/, '');
+        const subj = findValByLabel(tbl, t => /^Subject/i.test(t));
+        if (subj) data.subject = subj.textContent.replace(/^:\s*/, '');
+        const task = findValByLabel(tbl, t => /Task/i.test(t));
+        if (task) data.task = task.textContent.replace(/^:\s*/, '');
+
+        const tSem = getCheckboxState(tbl, 'Scanning Electron Microscope');
+        if (tSem !== null) data.testSem = tSem;
+        const tEdax = getCheckboxState(tbl, 'EDAX - Analysis');
+        if (tEdax !== null) data.testEdax = tEdax;
+        const tOpt = getCheckboxState(tbl, 'Optical Microscope');
+        if (tOpt !== null) data.testOpt = tOpt;
+        const tHard = getCheckboxState(tbl, 'Hardness measurement');
+        if (tHard !== null) data.testHard = tHard;
+
+        const sp1Sec = $all('td.sec', tbl).find(td => /3\)\s*Sample preparation for SEM/i.test(td.textContent));
+        if (sp1Sec && sp1Sec.closest('tr') && sp1Sec.closest('tr').nextElementSibling){
+          const c = sp1Sec.closest('tr').nextElementSibling.querySelector('td.val');
+          if (c) data.samplePrepSem = c.textContent;
+        }
+
+        const sp2Sec = $all('td.sec', tbl).find(td => /4\)\s*Sample preparation for microstructure/i.test(td.textContent));
+        if (sp2Sec && sp2Sec.closest('tr') && sp2Sec.closest('tr').nextElementSibling){
+          const c = sp2Sec.closest('tr').nextElementSibling.querySelector('td.val');
+          if (c) data.samplePrepMicro = c.textContent;
+        }
+
+        const calSec = $all('td.sec', tbl).find(td => /5\)\s*Calibration/i.test(td.textContent));
+        if (calSec && calSec.closest('tr') && calSec.closest('tr').nextElementSibling){
+          const calNoteCell = calSec.closest('tr').nextElementSibling.querySelector('td.val');
+          if (calNoteCell) data.calNote = calNoteCell.textContent;
+        }
+
+        const eht = findValByLabel(tbl, t => t === 'EHT');
+        if (eht) data.eht = eht.textContent;
+        const wd = findValByLabel(tbl, t => t === 'WD');
+        if (wd) data.wd = wd.textContent;
+        const spot = findValByLabel(tbl, t => t === 'Spot size');
+        if (spot) data.spotSize = spot.textContent;
+        const sig = findValByLabel(tbl, t => t === 'Signal');
+        if (sig) data.signal = sig.textContent;
+        const dt = findValByLabel(tbl, t => t === 'Dead time');
+        if (dt) data.deadTime = dt.textContent;
+        const lt = findValByLabel(tbl, t => t === 'Live time');
+        if (lt) data.liveTime = lt.textContent;
+
+        const reqDept = findValByLabel(tbl, t => /Requisition\s*Dept\./i.test(t));
+        if (reqDept) data.reqDept = reqDept.textContent;
+        const reqNo = findValByLabel(tbl, t => /complaint\s*No\./i.test(t));
+        if (reqNo) data.reqComplaintNo = reqNo.textContent;
+        const cust = findValByLabel(tbl, t => /External\s*Customer/i.test(t));
+        if (cust) data.extCustomer = cust.textContent;
+        const inj = findValByLabel(tbl, t => /Injector\s*no\./i.test(t));
+        if (inj) data.injectorNo = inj.textContent;
+        const mfd = findValByLabel(tbl, t => /Mfd\s*&\s*Sr/i.test(t));
+        if (mfd) data.mfdSrNo = mfd.textContent;
+        const locPart = findValByLabel(tbl, t => /Location of particle|Part Name & Number/i.test(t));
+        if (locPart) data.partNameLoc = locPart.textContent;
+        const subDate = findValByLabel(tbl, t => /Submission\s*date/i.test(t));
+        if (subDate) data.subDate = subDate.textContent;
+
+        const addInfo = cover1.querySelector('.invest-notes-box');
+        if (addInfo) data.addInfo = addInfo.innerHTML;
+
+        const prepText = cover1.querySelector('#preparedByCell .person-name-text');
+        if (prepText && prepText.textContent.trim()) data.preparedBy = prepText.textContent.trim();
+        const relText = cover1.querySelector('#releasedByCell .person-name-text');
+        if (relText && relText.textContent.trim()) data.releasedBy = relText.textContent.trim();
+      }
+    }
+
+    const cover2 = root.querySelector('#investigationCoverSheet2');
+    if (cover2){
+      const boxes = $all('.invest-notes-box', cover2);
+      if (boxes[0]) data.obs = boxes[0].innerHTML;
+      if (boxes[1]) data.conc = boxes[1].innerHTML;
+      if (boxes[2]) data.prop = boxes[2].innerHTML;
+
+      const prepText = cover2.querySelector('#investPreparedByCell .person-name-text');
+      if (prepText && prepText.textContent.trim()) data.preparedBy = prepText.textContent.trim();
+      const relText = cover2.querySelector('#investReleasedByCell .person-name-text');
+      if (relText && relText.textContent.trim()) data.releasedBy = relText.textContent.trim();
+    }
+
+    CACHED_COVER_DATA = data;
+    return data;
+  }
+
+  function applyCoverSheetData(newCoverSheets, data){
+    if (!newCoverSheets || !data) return;
+
+    function setValByLabel(table, labelMatcher, val, prefixColon){
+      if (!table || val == null) return;
+      const cells = $all('td', table);
+      for (let i = 0; i < cells.length; i++){
+        const c = cells[i];
+        if (labelMatcher(cleanText(c.textContent))){
+          if (c.nextElementSibling && c.nextElementSibling.tagName === 'TD'){
+            c.nextElementSibling.textContent = prefixColon ? (': ' + val.replace(/^:\s*/, '')) : val;
+            return;
+          }
+        }
+      }
+    }
+
+    function setCheckboxState(table, labelText, checked){
+      if (!table || checked == null) return;
+      const lines = $all('.chk-line', table);
+      for (const line of lines){
+        if (cleanText(line.textContent).toLowerCase().includes(labelText.toLowerCase())){
+          const cb = line.querySelector('input[type="checkbox"]');
+          if (cb){
+            cb.checked = !!checked;
+            cb.dispatchEvent(new Event('change'));
+          }
+        }
+      }
+    }
+
+    const cover1 = newCoverSheets.find(s => s.id === 'coverSheet' || s.id === 'investigationCoverSheet1');
+    if (cover1){
+      const tbl = cover1.querySelector('table');
+      if (tbl){
+        if (data.reportDate != null) setValByLabel(tbl, t => /^Report\s*Date/i.test(t), data.reportDate, cover1.id === 'investigationCoverSheet1');
+        if (data.reportNo != null) setValByLabel(tbl, t => /^Report\s*No/i.test(t), data.reportNo, cover1.id === 'investigationCoverSheet1');
+
+        if (data.production != null) setCheckboxState(tbl, 'Production', data.production);
+        if (data.zeroKm != null) { setCheckboxState(tbl, '0 KM', data.zeroKm); setCheckboxState(tbl, '0 Km', data.zeroKm); }
+        if (data.investigation != null) setCheckboxState(tbl, 'Investigation', data.investigation);
+        if (data.field != null) setCheckboxState(tbl, 'Field', data.field);
+
+        if (data.issuedBy != null) setValByLabel(tbl, t => /^Issued\s*By/i.test(t), data.issuedBy, true);
+        if (data.distribution != null) setValByLabel(tbl, t => /^Distribution/i.test(t), data.distribution, false);
+        if (data.subject != null) setValByLabel(tbl, t => /^Subject/i.test(t), data.subject, true);
+        if (data.task != null) setValByLabel(tbl, t => /Task/i.test(t), data.task, true);
+
+        if (data.testSem != null) setCheckboxState(tbl, 'Scanning Electron Microscope', data.testSem);
+        if (data.testEdax != null) setCheckboxState(tbl, 'EDAX - Analysis', data.testEdax);
+        if (data.testOpt != null) setCheckboxState(tbl, 'Optical Microscope', data.testOpt);
+        if (data.testHard != null) setCheckboxState(tbl, 'Hardness measurement', data.testHard);
+
+        if (data.samplePrepSem != null){
+          const sp1Sec = $all('td.sec', tbl).find(td => /3\)\s*Sample preparation for SEM/i.test(td.textContent));
+          if (sp1Sec && sp1Sec.closest('tr') && sp1Sec.closest('tr').nextElementSibling){
+            const tdVal = sp1Sec.closest('tr').nextElementSibling.querySelector('td.val');
+            if (tdVal) tdVal.textContent = data.samplePrepSem;
+          }
+        }
+
+        if (data.samplePrepMicro != null){
+          const sp2Sec = $all('td.sec', tbl).find(td => /4\)\s*Sample preparation for microstructure/i.test(td.textContent));
+          if (sp2Sec && sp2Sec.closest('tr') && sp2Sec.closest('tr').nextElementSibling){
+            const tdVal = sp2Sec.closest('tr').nextElementSibling.querySelector('td.val');
+            if (tdVal) tdVal.textContent = data.samplePrepMicro;
+          }
+        }
+
+        if (data.calNote != null){
+          const calSec = $all('td.sec', tbl).find(td => /5\)\s*Calibration/i.test(td.textContent));
+          if (calSec && calSec.closest('tr') && calSec.closest('tr').nextElementSibling){
+            const tdVal = calSec.closest('tr').nextElementSibling.querySelector('td.val');
+            if (tdVal) tdVal.textContent = data.calNote;
+          }
+        }
+
+        if (data.eht != null) setValByLabel(tbl, t => t === 'EHT', data.eht);
+        if (data.wd != null) setValByLabel(tbl, t => t === 'WD', data.wd);
+        if (data.spotSize != null) setValByLabel(tbl, t => t === 'Spot size', data.spotSize);
+        if (data.signal != null) setValByLabel(tbl, t => t === 'Signal', data.signal);
+        if (data.deadTime != null) setValByLabel(tbl, t => t === 'Dead time', data.deadTime);
+        if (data.liveTime != null) setValByLabel(tbl, t => t === 'Live time', data.liveTime);
+
+        if (data.reqDept != null) setValByLabel(tbl, t => /Requisition\s*Dept\./i.test(t), data.reqDept);
+        if (data.reqComplaintNo != null) setValByLabel(tbl, t => /complaint\s*No\./i.test(t), data.reqComplaintNo);
+        if (data.extCustomer != null) setValByLabel(tbl, t => /External\s*Customer/i.test(t), data.extCustomer);
+        if (data.injectorNo != null) setValByLabel(tbl, t => /Injector\s*no\./i.test(t), data.injectorNo);
+        if (data.mfdSrNo != null) setValByLabel(tbl, t => /Mfd\s*&\s*Sr/i.test(t), data.mfdSrNo);
+        if (data.partNameLoc != null) setValByLabel(tbl, t => /Location of particle|Part Name & Number/i.test(t), data.partNameLoc);
+        if (data.subDate != null) setValByLabel(tbl, t => /Submission\s*date/i.test(t), data.subDate);
+
+        if (data.addInfo != null){
+          const addInfoBox = cover1.querySelector('.invest-notes-box');
+          if (addInfoBox) addInfoBox.innerHTML = data.addInfo;
+        }
+
+        const prepText = cover1.querySelector('#preparedByCell .person-name-text');
+        if (prepText && data.preparedBy) prepText.textContent = data.preparedBy;
+        const relText = cover1.querySelector('#releasedByCell .person-name-text');
+        if (relText && data.releasedBy) relText.textContent = data.releasedBy;
+      }
+    }
+
+    const cover2 = newCoverSheets.find(s => s.id === 'investigationCoverSheet2');
+    if (cover2){
+      const boxes = $all('.invest-notes-box', cover2);
+      if (boxes[0] && data.obs != null) boxes[0].innerHTML = data.obs;
+      if (boxes[1] && data.conc != null) boxes[1].innerHTML = data.conc;
+      if (boxes[2] && data.prop != null) boxes[2].innerHTML = data.prop;
+
+      const prepText = cover2.querySelector('#investPreparedByCell .person-name-text');
+      if (prepText && data.preparedBy) prepText.textContent = data.preparedBy;
+      const relText = cover2.querySelector('#investReleasedByCell .person-name-text');
+      if (relText && data.releasedBy) relText.textContent = data.releasedBy;
+    }
+  }
+
   function setReportFormat(fmt){
     if (REPORT_FORMAT === fmt) return;
     REPORT_FORMAT = fmt;
     updateFormatUi();
     if (MODEL){
       const rr = $('#reportRoot');
-      rr.innerHTML = '';
-      rr.appendChild(renderReport(MODEL));
-      $all('[contenteditable]', rr).forEach(n => { n.spellcheck = false; });
-      renderOutline(MODEL);
+      const rootInner = $('#reportRootInner', rr);
+      if (rootInner){
+        // 1. Extract user-typed fields from current cover sheet(s)
+        const coverData = extractCoverSheetData(rootInner);
+
+        // 2. Remove existing cover sheets only
+        const oldCovers = $all('#coverSheet, #investigationCoverSheet1, #investigationCoverSheet2', rootInner);
+        oldCovers.forEach(c => c.remove());
+
+        // 3. Render new cover sheet(s) based on new format
+        const newCovers = [];
+        if (REPORT_FORMAT === 'investigation'){
+          newCovers.push(renderInvestigationCover1(MODEL));
+          newCovers.push(renderInvestigationCover2(MODEL));
+        } else {
+          newCovers.push(renderCover(MODEL));
+        }
+
+        // 4. Apply extracted cover data so nothing is lost
+        applyCoverSheetData(newCovers, coverData);
+
+        // 5. Insert at top of reportRootInner before first specimen site sheet
+        const firstSiteSheet = rootInner.firstElementChild;
+        newCovers.forEach(cs => {
+          if (firstSiteSheet){
+            rootInner.insertBefore(cs, firstSiteSheet);
+          } else {
+            rootInner.appendChild(cs);
+          }
+        });
+
+        $all('[contenteditable]', rootInner).forEach(n => { n.spellcheck = false; });
+        renderOutline(MODEL);
+      } else {
+        rr.innerHTML = '';
+        rr.appendChild(renderReport(MODEL));
+        $all('[contenteditable]', rr).forEach(n => { n.spellcheck = false; });
+        renderOutline(MODEL);
+      }
     }
     showToast(`Switched to ${fmt === 'investigation' ? 'Investigation' : 'Particle'} format.`);
   }
@@ -2473,6 +2893,7 @@
     renderOutline(model);
     renderStats(model);
     renderLog(model);
+    syncIncludeAllSpectraToggle();
     updateAllIntegrityBadges();
   }
 
@@ -2480,6 +2901,7 @@
     MODEL = null;
     SOURCE_FILE_HANDLE = null;
     LAST_SAVED_HANDLE = null;
+    if ($('#includeAllSpectraToggle')) $('#includeAllSpectraToggle').checked = false;
     $('#workspaceScreen').style.display = 'none';
     $('#previewScreen').style.display = 'none';
     $('#uploadScreen').style.display = 'flex';
@@ -2641,6 +3063,31 @@
       });
     }
   });
+
+  // Report Options: bulk toggle all spectra images
+  const includeAllSpectraToggle = $('#includeAllSpectraToggle');
+  if (includeAllSpectraToggle){
+    includeAllSpectraToggle.addEventListener('change', function(){
+      const checked = this.checked;
+      if (!MODEL) return;
+      (MODEL.project.specimens || []).forEach(sp => {
+        (sp.sites || []).forEach(st => {
+          (st.spectra || []).forEach(spc => {
+            spc.include = checked;
+          });
+        });
+      });
+      const rr = $('#reportRoot');
+      if (rr){
+        $all('.img-slot[data-kind="spectrum"]', rr).forEach(slot => {
+          const cb = slot.querySelector('.img-toggle-cb');
+          if (cb) cb.checked = checked;
+          slot.classList.toggle('excluded', !checked);
+        });
+      }
+      updateAllIntegrityBadges();
+    });
+  }
 
   // Smooth scroll to outline sections taking sticky headers into account
   $('#outlineList').addEventListener('click', (e)=>{
@@ -3047,8 +3494,8 @@ ${bodyEl.innerHTML}
 
       // Find all Quant Results Summary sections in source DOM
       const summaryDivs = Array.from(doc.querySelectorAll('div')).filter(d => {
-        const h = d.querySelector('h1, h2, h3, h4, h5, h6');
-        return h && cleanText(h.textContent).toLowerCase() === 'quant results summary';
+        const h = d.firstElementChild;
+        return h && /^H[1-6]$/.test(h.tagName) && cleanText(h.textContent).toLowerCase() === 'quant results summary';
       });
 
       const registeredSummaries = (model.sourceRegistry && model.sourceRegistry.allQuantSummaries) || [];
@@ -3121,8 +3568,8 @@ ${bodyEl.innerHTML}
 
       // 3. Individual Quant Results Tables (with Sigma) Preservation
       const indDivs = Array.from(doc.querySelectorAll('div')).filter(d => {
-        const h = d.querySelector('h1, h2, h3, h4, h5, h6');
-        return h && cleanText(h.textContent).toLowerCase() === 'quant results';
+        const h = d.firstElementChild;
+        return h && /^H[1-6]$/.test(h.tagName) && cleanText(h.textContent).toLowerCase() === 'quant results';
       });
       const registeredInd = (model.sourceRegistry && model.sourceRegistry.allIndividualQuantResults) || [];
       if (indDivs.length !== registeredInd.length){
@@ -3895,7 +4342,7 @@ ${bodyEl.innerHTML}
     let txt = `================================================================================\n`;
     txt += `EDAX REPORT CONVERTER — ZERO-LOSS DATA INTEGRITY & AUDIT TRAIL REPORT\n`;
     txt += `================================================================================\n\n`;
-    txt += `Software Version      : edax_report_converter v3.0\n`;
+    txt += `Software Version      : edax_report_converter v3.1\n`;
     txt += `Source File Name      : ${SOURCE_FILE_NAME}\n`;
     txt += `Source SHA-256 Hash   : ${(MODEL.sourceOfTruth && MODEL.sourceOfTruth.hash) || 'N/A'}\n`;
     txt += `Audit Timestamp       : ${new Date().toISOString()}\n`;

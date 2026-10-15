@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Automated Data Integrity Test Suite for EDAX Report Converter v3.0
+Automated Data Integrity Test Suite for EDAX Report Converter v3.1
 Validates Zero-Loss Preservation, Nested Table Isolation, Deep Source-to-Model
 Reconciliation, Independent Export Verification, Image Accounting (excluding vendor logos),
-and Pre-Export Safeguards.
+Pre-Export Safeguards, and v3.1 Data-Persistence / Metadata Features.
 """
 import os
 import re
@@ -13,12 +13,12 @@ from bs4 import BeautifulSoup
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-REPORT_CONVERTER_FILE = 'edax_report_converter v3.0.html'
+REPORT_CONVERTER_FILE = 'edax_report_converter v3.1.html'
 SOURCE_FILE = '0Km CRI.I. 26-172 Particle In Z Hole (M&M) ........17 - Project Report.html'
 
 def run_tests():
     print("=" * 80)
-    print("EDAX REPORT CONVERTER v3.0 — AUTOMATED DATA INTEGRITY TEST SUITE")
+    print("EDAX REPORT CONVERTER v3.1 — AUTOMATED DATA INTEGRITY TEST SUITE")
     print("=" * 80)
     passed = 0
     total = 0
@@ -44,11 +44,11 @@ def run_tests():
     with open(REPORT_CONVERTER_FILE, 'r', encoding='utf-8') as f:
         converter_html = f.read()
 
-    assert_test("Converter file exists & version is v3.0", 
-                "edax_report_converter v3.0" in converter_html and "<title>edax_report_converter v3.0</title>" in converter_html)
-    assert_test("Header displays v3.0", 'v3.0' in converter_html)
-    assert_test("Footer displays v3.0", 'edax_report_converter v3.0 &middot;' in converter_html)
-    assert_test("Audit text log records v3.0", 'Software Version      : edax_report_converter v3.0' in converter_html)
+    assert_test("Converter file exists & version is v3.1", 
+                "edax_report_converter v3.1" in converter_html and "<title>edax_report_converter v3.1</title>" in converter_html)
+    assert_test("Header displays v3.1", 'v3.1' in converter_html)
+    assert_test("Footer displays v3.1", 'edax_report_converter v3.1 &middot;' in converter_html)
+    assert_test("Audit text log records v3.1", 'Software Version      : edax_report_converter v3.1' in converter_html)
 
     # -------------------------------------------------------------
     # Group 2: Table Extraction & Nested Row Leakage Elimination
@@ -148,6 +148,25 @@ def run_tests():
     assert_test("Export Both guarded by pre-flight check", "if (!(await verifyPreExportIntegrity())) return;" in converter_html)
     assert_test("Broken images trigger FAIL status and blocking alert", "report.status = 'FAIL'" in converter_html and "brokenImages" in converter_html)
     assert_test("User edits trigger WARNING status and prompt confirmation", "report.status = 'WARNING'" in converter_html and "confirm(" in converter_html)
+
+    # -------------------------------------------------------------
+    # Group 8: v3.1 Persistence, Metadata Surfacing & Reconciliation Fixes
+    # -------------------------------------------------------------
+    print("\n--- Group 8: v3.1 Persistence, Metadata Surfacing & Verification Fixes ---")
+    assert_test("extractCoverSheetData implemented for format switching", "function extractCoverSheetData" in converter_html)
+    assert_test("applyCoverSheetData implemented for format switching", "function applyCoverSheetData" in converter_html)
+    assert_test("setReportFormat preserves specimen site sheets without wiping root", 
+                "rootInner.insertBefore(cs, firstSiteSheet)" in converter_html and "extractCoverSheetData(rootInner)" in converter_html)
+    assert_test("Safe comment copy preserves cell DOM and attaches photo-mini remove listeners", 
+                "cloned.remove()" in converter_html and "cVal.textContent = pVal.textContent" in converter_html)
+    assert_test("Auto-fill FOV µm button implemented in comment box", 
+                "auto-fov-btn" in converter_html and "Auto-fill FOV" in converter_html and "extractMicronValue" in converter_html)
+    assert_test("Direct firstElementChild heading check used in summaryDivs selector", 
+                "d.firstElementChild" in converter_html and "/^H[1-6]$/.test(h.tagName)" in converter_html)
+    assert_test("Metadata notes surfaced in Info Row (Project Notes & Specimen Notes)", 
+                "Project Notes:" in converter_html and "Specimen Notes:" in converter_html)
+    assert_test("Global includeAllSpectraToggle checkbox in sidebar and DOM listener wired", 
+                'id="includeAllSpectraToggle"' in converter_html and "syncIncludeAllSpectraToggle" in converter_html)
 
     # Summary
     print("\n" + "=" * 80)
